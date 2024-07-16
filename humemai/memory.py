@@ -21,7 +21,6 @@ class Memory:
         capacity: memory capacity
         _frozen: whether the memory system is frozen or not
 
-
     """
 
     def __init__(self, capacity: int, memories: list[list] = []) -> None:
