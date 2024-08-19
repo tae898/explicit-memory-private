@@ -14,9 +14,10 @@ papers](#list-of-academic-papers-that-use-humemai) and
 
 ## List of academic papers that use HumemAI
 
-- ["A Machine With Human-Like Memory Systems"](https://arxiv.org/abs/2204.01611).
+- ["A Machine With Human-Like Memory Systems"](https://arxiv.org/abs/2204.01611)
 - ["A Machine with Short-Term, Episodic, and Semantic Memory
-  Systems"](https://arxiv.org/abs/2212.02098).
+  Systems"](https://arxiv.org/abs/2212.02098)
+- ["Leveraging Knowledge Graph-Based Human-Like Memory Systems to Solve Partially Observable Markov Decision Processes"](https://arxiv.org/abs/2408.05861)
 
 ## List of applications that use HumemAI
 
