@@ -1,0 +1,7 @@
+PREFIX ex: <http://example.org/>
+SELECT ?person ?name ?age WHERE {
+  ?person a ex:Person ;
+          ex:name ?name ;
+          ex:age ?age .
+}
+

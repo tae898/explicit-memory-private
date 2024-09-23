@@ -1,0 +1,12 @@
+@prefix ex: <http://example.org/> .
+
+ex:PersonA a ex:Person ;
+    ex:name "Alice" ;
+    ex:age 25 .
+
+ex:PersonB a ex:Person ;
+    ex:name "Bob" ;
+    ex:age 30 .
+
+ex:PersonA ex:knows ex:PersonB .
+
