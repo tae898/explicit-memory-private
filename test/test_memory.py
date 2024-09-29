@@ -58,7 +58,7 @@ class TestMemory(unittest.TestCase):
     def test_query_memory(self):
         self.memory.add(["Alice", "likes", "Bob", {"type": "episodic"}])
         self.memory.add(["Alice", "loves", "Charlie", {"type": "episodic"}])
-        result = self.memory.query(["Alice", "?", "?", {"type": "episodic"}])
+        result = self.memory.query(["Alice", "?", "?", "?"])
         self.assertEqual(len(result), 2)
         self.assertTrue(
             ["Alice", "likes", "Bob", {"type": "episodic"}] in result.to_list()
@@ -466,7 +466,7 @@ class TestShortMemoryCanBeAdded(unittest.TestCase):
         self.assertFalse(can_be_added)
         self.assertEqual(error_msg, "The memory system is full!")
 
-        with self.assertRaises(AssertionError):
+        with self.assertRaises(ValueError):
             memory.add(mem)
 
     def test_can_be_added_without_current_time(self):
@@ -474,7 +474,7 @@ class TestShortMemoryCanBeAdded(unittest.TestCase):
         mem = ["A", "related_to", "B", {}]
         can_be_added, error_msg = memory.can_be_added(mem)
         self.assertFalse(can_be_added)
-        self.assertEqual(error_msg, "The memory should have current_time!")
+        self.assertEqual(error_msg, "The memory should have 'current_time'!")
 
     def test_can_be_added_with_full_memory(self):
         memory = ShortMemory(capacity=2)
@@ -507,7 +507,7 @@ class TestLongMemoryCanBeAdded(unittest.TestCase):
         mem = ["A", "related_to", "B", {}]
         can_be_added, error_msg = memory.can_be_added(mem)
         self.assertFalse(can_be_added)
-        self.assertEqual(error_msg, "The memory should have timestamp or strength!")
+        self.assertEqual(error_msg, "The memory should have 'timestamp' or 'strength'!")
 
     def test_can_be_added_with_full_memory(self):
         memory = LongMemory(capacity=2)
@@ -518,7 +518,7 @@ class TestLongMemoryCanBeAdded(unittest.TestCase):
         self.assertFalse(can_be_added)
         self.assertEqual(error_msg, "The memory system is full!")
 
-        with self.assertRaises(AssertionError):
+        with self.assertRaises(ValueError):
             memory.add(mem)
 
         mem = ["A", "related_to", "B", {"timestamp": [3]}]

@@ -1,9 +1,9 @@
 """Memory system classes."""
 
-from __future__ import annotations  # remove this from python 3.11
+from __future__ import annotations  # Needed for forward references in type annotations
 
 import random
-from typing import Literal
+from typing import Optional, List, Tuple, Union, Literal
 
 from .utils import merge_lists
 
@@ -23,7 +23,7 @@ class Memory:
 
     """
 
-    def __init__(self, capacity: int, memories: list[list] = []) -> None:
+    def __init__(self, capacity: int, memories: Optional[List[List]] = None) -> None:
         """
 
         Args:
@@ -32,10 +32,10 @@ class Memory:
                 then it's an empty memory system.
 
         """
-        self.entries = []
-        self.capacity = capacity
+        self.entries: List[List] = []
+        self.capacity: int = capacity
         assert self.capacity >= 0
-        self._frozen = False
+        self._frozen: bool = False
 
         if memories:
             for mem in memories:
@@ -51,11 +51,11 @@ class Memory:
     def __len__(self):
         return len(self.entries)
 
-    def __add__(self, other):
+    def __add__(self, other: Memory) -> Memory:
         entries = self.entries + other.entries
         return Memory(self.capacity + other.capacity, entries)
 
-    def can_be_added(self, mem) -> tuple[bool, str | None]:
+    def can_be_added(self, mem: List) -> Tuple[bool, Optional[str]]:
         """Check if a memory can be added to the system or not.
 
         Returns:
@@ -71,7 +71,7 @@ class Memory:
 
         return True, None
 
-    def add(self, mem: list) -> None:
+    def add(self, mem: List) -> None:
         """Add memory to the memory system.
 
         There is no sorting done. It's just appended to the end.
@@ -88,8 +88,8 @@ class Memory:
         if self.size > self.capacity:
             raise ValueError(f"Something went wrong. {self.size} > {self.capacity}.")
 
-    def can_be_forgotten(self, mem: list) -> tuple[bool, str]:
-        """Check if a memory can be added to the system or not.
+    def can_be_forgotten(self, mem: List) -> Tuple[bool, str]:
+        """Check if a memory can be forgotten from the system or not.
 
         Args:
             mem: A memory as a quadruple: [head, relation, tail, num]
@@ -113,12 +113,12 @@ class Memory:
 
         return True, None
 
-    def forget(self, mem: list) -> None:
-        """forget the given memory.
+    def forget(self, mem: List) -> None:
+        """Forget the given memory.
 
         Args:
             mem: A memory as a quadruple: [head, relation, tail, num], where `num` is
-                either a list of an int.
+                either a list or an int.
 
         """
         check, error_msg = self.can_be_forgotten(mem)
@@ -139,7 +139,7 @@ class Memory:
         else:
             self.entries = []
 
-    def has_memory(self, mem: list) -> bool:
+    def has_memory(self, mem: List) -> bool:
         """Check if a memory is in the memory system.
 
         Args:
@@ -180,7 +180,7 @@ class Memory:
         self._frozen = False
 
     def forget_random(self) -> None:
-        """Forget a memory in the memory system in a uniform-randomly."""
+        """Forget a memory in the memory system uniformly at random."""
         mem = random.choice(self.entries)
         self.forget(mem)
 
@@ -195,7 +195,7 @@ class Memory:
         self.capacity += increase
 
     def decrease_capacity(self, decrease: int) -> None:
-        """decrease the capacity.
+        """Decrease the capacity.
 
         Args:
             decrease: the amount of entries to decrease.
@@ -208,7 +208,7 @@ class Memory:
         )
         self.capacity -= decrease
 
-    def to_list(self) -> list[list]:
+    def to_list(self) -> List[List]:
         """Return the memories as a list of lists.
 
         Returns:
@@ -217,12 +217,12 @@ class Memory:
         """
         return self.entries
 
-    def query(self, query: list) -> Memory:
+    def query(self, query: List) -> Memory:
         """Query memory.
 
         Args:
             query: a quadruple, where each element can be "?". e.g.,
-                ["bob", "atlocation", "?", "?], ["?", "atlocation", "officeroom", "?"]
+                ["bob", "atlocation", "?", "?"], ["?", "atlocation", "officeroom", "?"]
                 "?" is used to match any value.
 
         Returns:
@@ -230,18 +230,24 @@ class Memory:
 
         """
         assert len(query) == 4
-        mems_found = []
+        mems_found: List[List] = []
 
         for mem in self.to_list():
             if (query[0] == "?") or (query[0] == mem[0]):
                 if (query[1] == "?") or (query[1] == mem[1]):
                     if (query[2] == "?") or (query[2] == mem[2]):
-                        if (query[3] == "?") or (set(query[3]).issubset(set(mem[3]))):
+                        if (query[3] == "?") or (
+                            isinstance(query[3], list)
+                            and isinstance(mem[3], dict)
+                            and set(query[3]).issubset(
+                                set(mem[3].get("current_time", []))
+                            )
+                        ):
                             mems_found.append(mem)
 
         return Memory(len(mems_found), mems_found)
 
-    def retrieve_random_memory(self) -> list:
+    def retrieve_random_memory(self) -> List:
         """Retrieve a random memory from the memory system.
 
         Returns:
@@ -255,8 +261,8 @@ class Memory:
         qualifier: str,
         qualifier_object_type: Literal["list", "int"],
         select_by: Literal["max", "min"],
-        list_select_by: Literal["max", "min"] | None = None,
-    ) -> list | None:
+        list_select_by: Optional[Literal["max", "min"]] = None,
+    ) -> Optional[List]:
         """Retrieve a memory based on a qualifier value.
 
         Args:
@@ -277,15 +283,15 @@ class Memory:
                 "object type is a list."
             )
 
-        def get_qualifier_value(memory):
+        def get_qualifier_value(memory: List) -> Union[List, int, None]:
             for element in memory:
                 if isinstance(element, dict) and qualifier in element:
                     return element[qualifier]
             return None
 
         # Initialize variables to track the memories with the desired qualifier value
-        desired_value = None
-        candidates = []
+        desired_value: Union[List, int, None] = None
+        candidates: List[List] = []
 
         # Iterate over each memory and update the candidates based on the qualifier
         for memory in self.to_list():
@@ -318,10 +324,10 @@ class Memory:
 class ShortMemory(Memory):
     """Short-term memory class."""
 
-    def __init__(self, capacity: int, memories: list[list] | None = None) -> None:
+    def __init__(self, capacity: int, memories: Optional[List[List]] = None) -> None:
         super().__init__(capacity, memories)
 
-    def can_be_added(self, mem: list) -> tuple[bool, str | None]:
+    def can_be_added(self, mem: List) -> Tuple[bool, Optional[str]]:
         """Check if a memory can be added to the short-term memory system.
 
         Args:
@@ -335,8 +341,9 @@ class ShortMemory(Memory):
         if not check:
             return check, error_msg
 
-        if "current_time" not in mem[-1]:
-            return False, "The memory should have current_time!"
+        # Check if the memory has "current_time" qualifier
+        if not isinstance(mem[-1], dict) or "current_time" not in mem[-1]:
+            return False, "The memory should have 'current_time'!"
 
         if self.is_full:
             for entry in self.entries:
@@ -347,25 +354,28 @@ class ShortMemory(Memory):
 
         return True, None
 
-    def add(self, mem: list) -> None:
+    def add(self, mem: List) -> None:
         """Append a memory to the short-term memory system.
 
         Args:
             mem: A memory as a quadruple: [head, relation, tail, qualifiers]
         """
-        assert self.can_be_added(mem)[0]
+        check, _ = self.can_be_added(mem)
+        if not check:
+            raise ValueError("Cannot add memory to ShortMemory.")
 
         added = False
 
         for entry in self.entries:
             if entry == mem:
                 added = True
+                break
 
         if not added:
             super().add(mem)
 
     @staticmethod
-    def ob2short(ob: list) -> list:
+    def ob2short(ob: List) -> List:
         """Turn an observation into a short memory.
 
         This is done by adding the qualifier "current_time" to the observation.
@@ -379,12 +389,13 @@ class ShortMemory(Memory):
 
         """
         assert len(ob) == 4, "The observation should be a quadruple."
-        mem = ob[:-1] + [{"current_time": ob[-1]}]
+        qualifiers = {"current_time": ob[-1]} if isinstance(ob[-1], int) else ob[-1]
+        mem = ob[:-1] + [qualifiers]
 
         return mem
 
     @staticmethod
-    def short2epi(short: list) -> list:
+    def short2epi(short: List) -> List:
         """Turn a short memory into an episodic memory.
 
         This is done by simply copying the short memory, and changing the qualifier
@@ -399,12 +410,18 @@ class ShortMemory(Memory):
             [int]}]
 
         """
+        assert (
+            len(short) == 4
+            and isinstance(short[-1], dict)
+            and "current_time" in short[-1]
+        ), "Invalid short memory format."
+
         epi = short[:-1] + [{"timestamp": [short[-1]["current_time"]]}]
 
         return epi
 
     @staticmethod
-    def short2sem(short: list) -> list:
+    def short2sem(short: List) -> List:
         """Turn a short memory into a semantic memory.
 
         Args:
@@ -416,6 +433,12 @@ class ShortMemory(Memory):
                 {"strength": int}]
 
         """
+        assert (
+            len(short) == 4
+            and isinstance(short[-1], dict)
+            and "current_time" in short[-1]
+        ), "Invalid short memory format."
+
         sem = short[:-1] + [{"strength": 1}]
 
         return sem
@@ -427,7 +450,7 @@ class LongMemory(Memory):
     def __init__(
         self,
         capacity: int,
-        memories: list[list] | None = None,
+        memories: Optional[List[List]] = None,
         semantic_decay_factor: float = 1.0,
         min_strength: int = 1,
     ) -> None:
@@ -444,15 +467,14 @@ class LongMemory(Memory):
         """
         super().__init__(capacity, memories)
         assert 0.0 <= semantic_decay_factor <= 1.0, "Decay factor should be in [0, 1]"
-        self.semantic_decay_factor = semantic_decay_factor
-        self.min_strength = min_strength
+        self.semantic_decay_factor: float = semantic_decay_factor
+        self.min_strength: int = min_strength
 
-    def can_be_added(self, mem: list) -> tuple[bool, str | None]:
+    def can_be_added(self, mem: List) -> Tuple[bool, Optional[str]]:
         """Check if a memory can be added to the long-term memory system.
 
         Args:
             mem: A memory as a quadruple: [head, relation, tail, qualifiers]
-            type: "episodic" or "semantic"
 
         Returns:
             True or False, error_msg
@@ -464,10 +486,11 @@ class LongMemory(Memory):
 
         # Check if the memory has "timestamp" or "strength" qualifiers
         if (
-            not set(mem[-1]).issubset(set(["timestamp", "strength"]))
-            or set(mem[-1]) == set()
+            not isinstance(mem[-1], dict)
+            or not set(mem[-1].keys()).issubset({"timestamp", "strength"})
+            or not mem[-1]
         ):
-            return False, "The memory should have timestamp or strength!"
+            return False, "The memory should have 'timestamp' or 'strength'!"
 
         if self.is_full:
             for entry in self.entries:
@@ -479,13 +502,15 @@ class LongMemory(Memory):
         else:
             return True, None
 
-    def add(self, mem: list) -> None:
+    def add(self, mem: List) -> None:
         """Append a memory to the long-term memory system.
 
         Args:
             mem: A memory as a quadruple: [head, relation, tail, qualifiers]
         """
-        assert self.can_be_added(mem)[0]
+        check, _ = self.can_be_added(mem)
+        if not check:
+            raise ValueError("Cannot add memory to LongMemory.")
 
         added = False
 
@@ -496,16 +521,12 @@ class LongMemory(Memory):
                     entry[-1]["timestamp"] = sorted(
                         entry[-1]["timestamp"] + mem[-1]["timestamp"]
                     )
-                elif "timestamp" in entry[-1]:
-                    pass
                 elif "timestamp" in mem[-1]:
                     entry[-1]["timestamp"] = mem[-1]["timestamp"]
 
                 # Sum 'strength' values if present in both dictionaries
                 if "strength" in entry[-1] and "strength" in mem[-1]:
-                    entry[-1]["strength"] = entry[-1]["strength"] + mem[-1]["strength"]
-                elif "strength" in entry[-1]:
-                    pass
+                    entry[-1]["strength"] += mem[-1]["strength"]
                 elif "strength" in mem[-1]:
                     entry[-1]["strength"] = mem[-1]["strength"]
 
@@ -567,15 +588,16 @@ class LongMemory(Memory):
         if self.semantic_decay_factor < 1.0:
             for mem in self.entries:
                 if "strength" in mem[-1]:
-                    mem[-1]["strength"] *= self.semantic_decay_factor
-                    if mem[-1]["strength"] < 1:
-                        mem[-1]["strength"] = self.min_strength
+                    mem[-1]["strength"] = max(
+                        mem[-1]["strength"] * self.semantic_decay_factor,
+                        self.min_strength,
+                    )
 
-    def count_memories(self) -> tuple[int, int]:
+    def count_memories(self) -> Tuple[int, int]:
         """Count the memories with qualifiers, "timestamp" and "strength", respectively.
 
         Returns:
-            number of "timestamp" memories, number of "current_time" memories
+            number of "timestamp" memories, number of "strength" memories
 
         """
         num_timestamps = 0
@@ -591,22 +613,22 @@ class LongMemory(Memory):
 
     def pretrain_semantic(
         self,
-        semantic_knowledge: list[list],
+        semantic_knowledge: List[List],
     ) -> None:
         """Pretrain (prepopulate) the semantic memory system.
 
         Args:
             semantic_knowledge: e.g., [["desk", "atlocation", "officeroom"],
-                ["chair", "atlocation", "officeroom",
-                ["officeroom", "north", "livingroom]]
+                ["chair", "atlocation", "officeroom"],
+                ["officeroom", "north", "livingroom"]]
 
         """
         self.semantic_knowledge = semantic_knowledge
         for triple in self.semantic_knowledge:
-            assert len(triple) == 3
+            assert len(triple) == 3, "Each semantic knowledge entry must be a triple."
             if self.is_full:
                 break
-            mem = [*triple, {"strength": 1}]  # num_generalized = 1
+            mem = [*triple, {"strength": 1}]  # Initialize with strength 1
             self.add(mem)
 
 
@@ -638,16 +660,16 @@ class MemorySystems:
             long: long-term memory system
 
         """
-        self.short = short
-        self.long = long
-        self.qualifier_relations = ["current_time", "timestamp", "strength"]
+        self.short: ShortMemory = short
+        self.long: LongMemory = long
+        self.qualifier_relations: List[str] = ["current_time", "timestamp", "strength"]
 
     def forget_all(self) -> None:
         """Forget everything in the memory systems."""
         self.short.forget_all()
         self.long.forget_all()
 
-    def get_working_memory(self, working_num_hops: int | None = None) -> Memory:
+    def get_working_memory(self, working_num_hops: Optional[int] = None) -> Memory:
         """Get the working memory system. This is short-term + partial long-term memory.
 
         Args:
@@ -663,11 +685,11 @@ class MemorySystems:
                 "Not implemented yet. Please set working_num_hops to None."
             )
 
-        working = []
+        working: List[List] = []
         working += self.short.entries
         working += self.long.entries
         working = merge_lists(working)
 
-        working = Memory(len(working), working)
+        working_memory = Memory(len(working), working)
 
-        return working
+        return working_memory

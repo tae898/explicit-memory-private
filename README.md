@@ -12,6 +12,14 @@ RDFLib is top priority and it'll come with v2. There have been both [academic
 papers](#list-of-academic-papers-that-use-humemai) and
 [applications](#list-of-applications-that-use-humemai) that have used this package.
 
+## Installation
+
+```shell
+pip install humemai
+```
+
+python>=3.8
+
 ## List of academic papers that use HumemAI
 
 - ["A Machine With Human-Like Memory Systems"](https://arxiv.org/abs/2204.01611)
