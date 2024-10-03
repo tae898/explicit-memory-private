@@ -1,695 +1,968 @@
-"""Memory system classes."""
+"""Memory Class with RDFLib"""
 
-from __future__ import annotations  # Needed for forward references in type annotations
+import logging
+from rdflib import Graph, URIRef, BNode, Literal, Namespace
+from rdflib.namespace import RDF, XSD
+from datetime import datetime
+import collections
 
-import random
-from typing import Optional, List, Tuple, Union, Literal
+from .utils import validate_iso_format
 
-from .utils import merge_lists
+# Configure logging
+logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger("humemai.memory")
+
+# Define custom namespace for humemai ontology
+humemai = Namespace("https://humem.ai/ontology/")
 
 
 class Memory:
-    """Memory class.
-
-    At the moment, the memory system is a simple Python list of memories. In the future,
-    a more suitable python object will be used to represent the graph structure of the
-    memories.
-
-    Attributes:
-        type: episodic, semantic, short, or working
-        entries: list of memories
-        capacity: memory capacity
-        _frozen: whether the memory system is frozen or not
-
+    """
+    Memory class for managing both short-term and long-term memories.
+    Provides methods to add, retrieve, delete, cluster, and manage memories in the RDF graph.
     """
 
-    def __init__(self, capacity: int, memories: Optional[List[List]] = None) -> None:
+    def __init__(self, verbose_repr: bool = False):
+        # Initialize RDF graph for memory storage
+        self.graph = Graph()
+        self.graph.bind("humemai", humemai)
+        self.verbose_repr = verbose_repr
+        self.current_statement_id = 0  # Counter to track the next unique ID
+
+    def add_memory(self, triples: list, qualifiers: dict):
         """
+        Add a reified statement to the RDF graph, with the main triple and optional
+        qualifiers.
 
         Args:
-            capacity: memory capacity
-            memories: memories that can already be added from the beginning, if None,
-                then it's an empty memory system.
-
+            triples (list): A list of triples (subject, predicate, object) to be added.
+            qualifiers (dict): A dictionary of qualifiers (e.g., location, currentTime).
         """
-        self.entries: List[List] = []
-        self.capacity: int = capacity
-        assert self.capacity >= 0
-        self._frozen: bool = False
+        for subj, pred, obj in triples:
+            logger.debug(f"Adding triple: ({subj}, {pred}, {obj})")
 
-        if memories:
-            for mem in memories:
-                check, error_msg = self.can_be_added(mem)
-                if not check:
-                    raise ValueError(error_msg)
-                else:
-                    self.add(mem)
+            # Add the main triple [subject, predicate, object] if it doesn't already exist
+            if not (subj, pred, obj) in self.graph:
+                self.graph.add((subj, pred, obj))
+                logger.debug(f"Main triple added: ({subj}, {pred}, {obj})")
+            else:
+                logger.debug(f"Main triple already exists: ({subj}, {pred}, {obj})")
 
-    def __iter__(self):
-        return iter(self.entries[:])
+            # Create a new reified statement to attach the qualifiers, and assign a unique ID
+            statement = BNode()  # Blank node to represent the new reified statement
+            unique_id = self.current_statement_id  # Get the current ID
+            self.current_statement_id += 1  # Increment for the next memory
 
-    def __len__(self):
-        return len(self.entries)
+            # Add the reified statement and unique ID
+            self.graph.add((statement, RDF.type, RDF.Statement))
+            self.graph.add((statement, RDF.subject, subj))
+            self.graph.add((statement, RDF.predicate, pred))
+            self.graph.add((statement, RDF.object, obj))
+            self.graph.add(
+                (statement, humemai.memoryID, Literal(unique_id, datatype=XSD.integer))
+            )  # Add the unique ID
 
-    def __add__(self, other: Memory) -> Memory:
-        entries = self.entries + other.entries
-        return Memory(self.capacity + other.capacity, entries)
+            logger.debug(f"Reified statement created: {statement} with ID {unique_id}")
 
-    def can_be_added(self, mem: List) -> Tuple[bool, Optional[str]]:
-        """Check if a memory can be added to the system or not.
-
-        Returns:
-            True or False
-            error_msg
-
-        """
-        if self.capacity == 0:
-            return False, "The memory system capacity is 0!"
-
-        if self._frozen:
-            return False, "The memory system is frozen!"
-
-        return True, None
-
-    def add(self, mem: List) -> None:
-        """Add memory to the memory system.
-
-        There is no sorting done. It's just appended to the end.
-
-        Args:
-           mem: A memory as a quadruple: [head, relation, tail, num]
-
-        """
-        check, error_msg = self.can_be_added(mem)
-        if not check:
-            raise ValueError(error_msg)
-        self.entries.append(mem)
-
-        if self.size > self.capacity:
-            raise ValueError(f"Something went wrong. {self.size} > {self.capacity}.")
-
-    def can_be_forgotten(self, mem: List) -> Tuple[bool, str]:
-        """Check if a memory can be forgotten from the system or not.
-
-        Args:
-            mem: A memory as a quadruple: [head, relation, tail, num]
-
-        Returns:
-            True or False
-            error_msg
-
-        """
-        if self.capacity == 0:
-            return False, "The memory system capacity is 0!"
-
-        if self.size == 0:
-            return False, "The memory system is empty!"
-
-        if self._frozen:
-            return False, "The memory system is frozen!"
-
-        if mem not in self.entries:
-            return False, f"{mem} is not in the memory system!"
-
-        return True, None
-
-    def forget(self, mem: List) -> None:
-        """Forget the given memory.
-
-        Args:
-            mem: A memory as a quadruple: [head, relation, tail, num], where `num` is
-                either a list or an int.
-
-        """
-        check, error_msg = self.can_be_forgotten(mem)
-        if not check:
-            raise ValueError(error_msg)
-        self.entries.remove(mem)
-
-    def forget_all(self) -> None:
-        """Forget everything in the memory system!"""
-        if self.capacity == 0:
-            error_msg = "The memory system capacity is 0. Can't forget all."
-            raise ValueError(error_msg)
-
-        if self.is_frozen:
-            error_msg = "The memory system is frozen. Can't forget all. Unfreeze first."
-            raise ValueError(error_msg)
-
-        else:
-            self.entries = []
-
-    def has_memory(self, mem: List) -> bool:
-        """Check if a memory is in the memory system.
-
-        Args:
-            mem: A memory as a quadruple: [head, relation, tail, object]
-
-        Returns:
-            True or False
-
-        """
-        return mem in self.entries
-
-    @property
-    def is_empty(self) -> bool:
-        """Return true if empty."""
-        return len(self.entries) == 0
-
-    @property
-    def is_full(self) -> bool:
-        """Return true if full."""
-        return len(self.entries) == self.capacity
-
-    @property
-    def is_frozen(self) -> bool:
-        """Is frozen?"""
-        return self._frozen
-
-    @property
-    def size(self) -> int:
-        """Get the size (number of filled entries) of the memory system."""
-        return len(self.entries)
-
-    def freeze(self) -> None:
-        """Freeze the memory so that nothing can be added / deleted."""
-        self._frozen = True
-
-    def unfreeze(self) -> None:
-        """Unfreeze the memory so that something can be added / deleted."""
-        self._frozen = False
-
-    def forget_random(self) -> None:
-        """Forget a memory in the memory system uniformly at random."""
-        mem = random.choice(self.entries)
-        self.forget(mem)
-
-    def increase_capacity(self, increase: int) -> None:
-        """Increase the capacity.
-
-        Args:
-            increase: the amount of entries to increase.
-
-        """
-        assert isinstance(increase, int) and (not self.is_frozen)
-        self.capacity += increase
-
-    def decrease_capacity(self, decrease: int) -> None:
-        """Decrease the capacity.
-
-        Args:
-            decrease: the amount of entries to decrease.
-
-        """
-        assert (
-            isinstance(decrease, int)
-            and (self.capacity - decrease >= 0)
-            and (not self.is_frozen)
-        )
-        self.capacity -= decrease
-
-    def to_list(self) -> List[List]:
-        """Return the memories as a list of lists.
-
-        Returns:
-            a list of lists
-
-        """
-        return self.entries
-
-    def query(self, query: List) -> Memory:
-        """Query memory.
-
-        Args:
-            query: a quadruple, where each element can be "?". e.g.,
-                ["bob", "atlocation", "?", "?"], ["?", "atlocation", "officeroom", "?"]
-                "?" is used to match any value.
-
-        Returns:
-
-
-        """
-        assert len(query) == 4
-        mems_found: List[List] = []
-
-        for mem in self.to_list():
-            if (query[0] == "?") or (query[0] == mem[0]):
-                if (query[1] == "?") or (query[1] == mem[1]):
-                    if (query[2] == "?") or (query[2] == mem[2]):
-                        if (query[3] == "?") or (
-                            isinstance(query[3], list)
-                            and isinstance(mem[3], dict)
-                            and set(query[3]).issubset(
-                                set(mem[3].get("current_time", []))
+            # Add the provided qualifiers with the correct data types
+            for key, value in qualifiers.items():
+                if key in [humemai.currentTime, humemai.time]:
+                    if validate_iso_format(value):
+                        self.graph.add(
+                            (
+                                statement,
+                                URIRef(key),
+                                Literal(value, datatype=XSD.dateTime),
                             )
-                        ):
-                            mems_found.append(mem)
+                        )
+                        logger.debug(
+                            f"Added qualifier: ({statement}, {key}, {value}) with datatype xsd:dateTime"
+                        )
+                    else:
+                        raise ValueError("Invalid date format. Please use ISO format.")
 
-        return Memory(len(mems_found), mems_found)
+                elif key == humemai.strength:
+                    self.graph.add(
+                        (statement, URIRef(key), Literal(value, datatype=XSD.integer))
+                    )
+                    logger.debug(
+                        f"Added qualifier: ({statement}, {key}, {value}) with datatype xsd:integer"
+                    )
+                elif key == humemai.recalled:
+                    self.graph.add(
+                        (statement, URIRef(key), Literal(value, datatype=XSD.integer))
+                    )
+                    logger.debug(
+                        f"Added qualifier: ({statement}, {key}, {value}) with datatype xsd:integer"
+                    )
+                else:
+                    self.graph.add((statement, URIRef(key), Literal(value)))
+                    logger.debug(
+                        f"Added qualifier: ({statement}, {key}, {value}) as plain literal"
+                    )
 
-    def retrieve_random_memory(self) -> List:
-        """Retrieve a random memory from the memory system.
-
-        Returns:
-            random_memory: A random memory from the memory system
-
+    def delete_memory(self, memory_id: int):
         """
-        return random.choice(self.to_list())
-
-    def retrieve_memory_by_qualifier(
-        self,
-        qualifier: str,
-        qualifier_object_type: Literal["list", "int"],
-        select_by: Literal["max", "min"],
-        list_select_by: Optional[Literal["max", "min"]] = None,
-    ) -> Optional[List]:
-        """Retrieve a memory based on a qualifier value.
+        Delete a memory (reified statement) by its unique ID, including all associated qualifiers.
 
         Args:
-            qualifier: The qualifier to search for
-            qualifier_object_type: The type of the qualifier object
-            select_by: The selection method to use when comparing qualifier values
-            list_select_by: The selection method to use when comparing list qualifier
-                values
+            memory_id (int): The unique ID of the memory to be deleted.
+        """
+        logger.debug(f"Deleting memory with ID: {memory_id}")
+
+        # Find the reified statement with the given ID
+        statement = None
+        for stmt in self.graph.subjects(
+            humemai.memoryID, Literal(memory_id, datatype=XSD.integer)
+        ):
+            statement = stmt
+            break
+
+        if statement is None:
+            logger.error(f"No memory found with ID {memory_id}")
+            return
+
+        # Get the main triple (subject, predicate, object) from the reified statement
+        subj = self.graph.value(statement, RDF.subject)
+        pred = self.graph.value(statement, RDF.predicate)
+        obj = self.graph.value(statement, RDF.object)
+
+        if subj is None or pred is None or obj is None:
+            logger.error(
+                f"Invalid memory statement {statement}. Cannot find associated triple."
+            )
+            return
+
+        logger.debug(f"Deleting main triple: ({subj}, {pred}, {obj})")
+
+        # Remove the main triple
+        self.graph.remove((subj, pred, obj))
+
+        # Remove all qualifiers associated with this reified statement
+        for p, o in list(self.graph.predicate_objects(statement)):
+            self.graph.remove((statement, p, o))
+            logger.debug(f"Removed qualifier triple: ({statement}, {p}, {o})")
+
+        # Remove the reified statement itself
+        self.graph.remove((statement, RDF.type, RDF.Statement))
+        self.graph.remove((statement, RDF.subject, subj))
+        self.graph.remove((statement, RDF.predicate, pred))
+        self.graph.remove((statement, RDF.object, obj))
+
+        logger.info(f"Memory with ID {memory_id} deleted successfully.")
+
+    def get_memory_by_id(self, memory_id: int) -> dict:
+        """
+        Retrieve a memory (reified statement) by its unique ID and return its details.
+
+        Args:
+            memory_id (int): The unique ID of the memory to retrieve.
 
         Returns:
-            desired_memory: The memory with the desired qualifier value
-
+            dict: A dictionary with the memory details (subject, predicate, object, qualifiers).
         """
+        # Find the reified statement with the given ID
+        for stmt in self.graph.subjects(
+            humemai.memoryID, Literal(memory_id, datatype=XSD.integer)
+        ):
+            subj = self.graph.value(stmt, RDF.subject)
+            pred = self.graph.value(stmt, RDF.predicate)
+            obj = self.graph.value(stmt, RDF.object)
+            qualifiers = {}
 
-        if qualifier_object_type == "list" and list_select_by is None:
-            raise ValueError(
-                "The list_select_by parameter must be provided when the qualifier "
-                "object type is a list."
-            )
-
-        def get_qualifier_value(memory: List) -> Union[List, int, None]:
-            for element in memory:
-                if isinstance(element, dict) and qualifier in element:
-                    return element[qualifier]
-            return None
-
-        # Initialize variables to track the memories with the desired qualifier value
-        desired_value: Union[List, int, None] = None
-        candidates: List[List] = []
-
-        # Iterate over each memory and update the candidates based on the qualifier
-        for memory in self.to_list():
-            qualifier_value = get_qualifier_value(memory)
-            if qualifier_value is not None:
-                if qualifier_object_type == "list":
-                    if list_select_by == "max":
-                        value = max(qualifier_value)
-                    elif list_select_by == "min":
-                        value = min(qualifier_value)
-                    else:
-                        continue  # Handle cases where list_select_by is not provided
-                else:  # qualifier_object_type == "int"
-                    value = qualifier_value
-
-                if desired_value is None or (
-                    (select_by == "min" and value < desired_value)
-                    or (select_by == "max" and value > desired_value)
+            # Collect all qualifiers for this memory
+            for q_pred, q_obj in self.graph.predicate_objects(stmt):
+                if q_pred not in (
+                    RDF.type,
+                    RDF.subject,
+                    RDF.predicate,
+                    RDF.object,
                 ):
-                    desired_value = value
-                    candidates = [memory]
-                elif value == desired_value:
-                    candidates.append(memory)
+                    qualifiers[str(q_pred)] = str(q_obj)
 
-        if candidates:
-            return random.choice(candidates)
+            return {
+                "subject": subj,
+                "predicate": pred,
+                "object": obj,
+                "qualifiers": qualifiers,
+            }
+
+        logger.error(f"No memory found with ID {memory_id}")
         return None
 
-
-class ShortMemory(Memory):
-    """Short-term memory class."""
-
-    def __init__(self, capacity: int, memories: Optional[List[List]] = None) -> None:
-        super().__init__(capacity, memories)
-
-    def can_be_added(self, mem: List) -> Tuple[bool, Optional[str]]:
-        """Check if a memory can be added to the short-term memory system.
+    def delete_triple(self, subject: URIRef, predicate: URIRef, object_: URIRef):
+        """
+        Delete a triple from the RDF graph, including all of its qualifiers.
 
         Args:
-            mem: A memory as a quadruple: [head, relation, tail, current_time]
-
-        Returns:
-            True or False, error_msg
-
+            subject (URIRef): The subject of the memory triple.
+            predicate (URIRef): The predicate of the memory triple.
+            object_ (URIRef): The object of the memory triple.
         """
-        check, error_msg = super().can_be_added(mem)
-        if not check:
-            return check, error_msg
+        # Remove the main triple
+        self.graph.remove((subject, predicate, object_))
+        logger.debug(f"Removed triple: ({subject}, {predicate}, {object_})")
 
-        # Check if the memory has "current_time" qualifier
-        if not isinstance(mem[-1], dict) or "current_time" not in mem[-1]:
-            return False, "The memory should have 'current_time'!"
+        # Find all reified statements for this triple
+        for statement in list(self.graph.subjects(RDF.type, RDF.Statement)):
+            s = self.graph.value(statement, RDF.subject)
+            p = self.graph.value(statement, RDF.predicate)
+            o = self.graph.value(statement, RDF.object)
+            if s == subject and p == predicate and o == object_:
+                logger.debug(f"Removing qualifiers for statement: {statement}")
+                # Remove all triples related to this statement
+                for _, _, obj in list(self.graph.triples((statement, None, None))):
+                    self.graph.remove((statement, _, obj))
+                    logger.debug(f"Removed qualifier triple: ({statement}, _, {obj})")
 
-        if self.is_full:
-            for entry in self.entries:
-                if entry == mem:
-                    return True, None
-
-            return False, "The memory system is full!"
-
-        return True, None
-
-    def add(self, mem: List) -> None:
-        """Append a memory to the short-term memory system.
+    def add_short_term_memory(
+        self, triples: list, location: str = None, currentTime: str = None
+    ):
+        """
+        Add short-term memories to the RDF graph, enforcing required qualifiers.
 
         Args:
-            mem: A memory as a quadruple: [head, relation, tail, qualifiers]
+            triples (list): A list of triples to add.
+            location (str): The current location.
+            currentTime (str, optional): The current time in ISO 8601 format.
         """
-        check, _ = self.can_be_added(mem)
-        if not check:
-            raise ValueError("Cannot add memory to ShortMemory.")
+        if currentTime is None:
+            currentTime = datetime.now().isoformat()
 
-        added = False
+        # Ensure currentTime is in ISO 8601 format
+        if not validate_iso_format(currentTime):
+            raise ValueError(f"Invalid currentTime format: {currentTime}")
 
-        for entry in self.entries:
-            if entry == mem:
-                added = True
-                break
+        # Check for required qualifiers
+        if not currentTime:
+            raise ValueError("Missing required qualifier: currentTime")
 
-        if not added:
-            super().add(mem)
+        qualifiers = {
+            humemai.currentTime: currentTime,
+            humemai.location: location,
+        }
 
-    @staticmethod
-    def ob2short(ob: List) -> List:
-        """Turn an observation into a short memory.
+        self.add_memory(triples, qualifiers)
 
-        This is done by adding the qualifier "current_time" to the observation.
-
-        Args:
-            ob: An observation as a quadruple: [head, relation, tail, current_time]
-
-        Returns:
-            mem: A short-term memory as a quadruple: [head, relation, tail,
-                {"current_time": int}]
-
-        """
-        assert len(ob) == 4, "The observation should be a quadruple."
-        qualifiers = {"current_time": ob[-1]} if isinstance(ob[-1], int) else ob[-1]
-        mem = ob[:-1] + [qualifiers]
-
-        return mem
-
-    @staticmethod
-    def short2epi(short: List) -> List:
-        """Turn a short memory into an episodic memory.
-
-        This is done by simply copying the short memory, and changing the qualifier
-        "current_time" to "timestamp".
-
-        Args:
-            short: A short memory as a quadruple: [head, relation, tail,
-                {"current_time": int}]
-
-        Returns:
-            epi: An episodic memory as a quadruple: [head, relation, tail, {"timestamp":
-            [int]}]
-
-        """
-        assert (
-            len(short) == 4
-            and isinstance(short[-1], dict)
-            and "current_time" in short[-1]
-        ), "Invalid short memory format."
-
-        epi = short[:-1] + [{"timestamp": [short[-1]["current_time"]]}]
-
-        return epi
-
-    @staticmethod
-    def short2sem(short: List) -> List:
-        """Turn a short memory into a semantic memory.
-
-        Args:
-            short: A short memory as a quadruple: [head, relation, tail,
-                {"current_time": int}]
-
-        Returns:
-            sem: A semantic memory as a quadruple: [head, relation, tail,
-                {"strength": int}]
-
-        """
-        assert (
-            len(short) == 4
-            and isinstance(short[-1], dict)
-            and "current_time" in short[-1]
-        ), "Invalid short memory format."
-
-        sem = short[:-1] + [{"strength": 1}]
-
-        return sem
-
-
-class LongMemory(Memory):
-    """Long-term memory class."""
-
-    def __init__(
+    def add_long_term_memory(
         self,
-        capacity: int,
-        memories: Optional[List[List]] = None,
-        semantic_decay_factor: float = 1.0,
-        min_strength: int = 1,
-    ) -> None:
-        """Initialize the long-term memory system.
+        memory_type: str,
+        triples: list,
+        location: str = None,
+        time: str = None,
+        emotion: str = None,
+        derivedFrom: str = None,
+        strength: int = None,
+        event: str = None,
+    ):
+        """
+        Add long-term memories to the RDF graph, enforcing required qualifiers.
 
         Args:
-            capacity: memory capacity
-            memories: memories that can already be added from the beginning, if None,
-                then it's an empty memory system.
-            semantic_decay_factor: The decay factor for semantic memories. The lower
-                the value, the faster the decay. The value should be between 0 and 1.
-            min_strength: The minimum strength value for a memory. If the strength
-                becomes less than this value, it is set to this value.
+            memory_type (str): The type of memory. Should be either "episodic" or "semantic".
+            triples (list): A list of triples to add.
+            location (str, optional): The location associated with the memory.
+            time (str, optional): The time associated with the memory in ISO 8601 format.
+            emotion (str, optional): The emotion associated with the memory.
+            derivedFrom (str, optional): The source from which the memory was derived.
+            strength (int, optional): The strength of the memory.
+            event (str, optional): The event associated with the memory.
         """
-        super().__init__(capacity, memories)
-        assert 0.0 <= semantic_decay_factor <= 1.0, "Decay factor should be in [0, 1]"
-        self.semantic_decay_factor: float = semantic_decay_factor
-        self.min_strength: int = min_strength
+        qualifiers = {}
 
-    def can_be_added(self, mem: List) -> Tuple[bool, Optional[str]]:
-        """Check if a memory can be added to the long-term memory system.
+        if memory_type == "episodic":
+            # Required qualifiers for episodic memories
+            if not time:
+                raise ValueError("Missing required qualifier for episodic memory: time")
 
-        Args:
-            mem: A memory as a quadruple: [head, relation, tail, qualifiers]
+            if not validate_iso_format(time):
+                raise ValueError(f"Invalid time format: {time}")
 
-        Returns:
-            True or False, error_msg
+            if strength or derivedFrom:
+                raise ValueError(
+                    "Invalid qualifiers for episodic memory. Use 'semantic' memory type instead."
+                )
 
-        """
-        check, error_msg = super().can_be_added(mem)
-        if not check:
-            return check, error_msg
+            qualifiers[humemai.location] = location
+            qualifiers[humemai.time] = time
+            qualifiers[humemai.emotion] = emotion
+            qualifiers[humemai.event] = event
 
-        # Check if the memory has "timestamp" or "strength" qualifiers
-        if (
-            not isinstance(mem[-1], dict)
-            or not set(mem[-1].keys()).issubset({"timestamp", "strength"})
-            or not mem[-1]
-        ):
-            return False, "The memory should have 'timestamp' or 'strength'!"
+        elif memory_type == "semantic":
+            # Required qualifiers for semantic memories
+            if location or time or emotion:
+                raise ValueError(
+                    "Invalid qualifiers for semantic memory. Use 'episodic' memory type instead."
+                )
 
-        if self.is_full:
-            for entry in self.entries:
-                if entry[:-1] == mem[:-1]:
-                    return True, None
-
-            return False, "The memory system is full!"
+            qualifiers[humemai.strength] = strength
+            qualifiers[humemai.derivedFrom] = derivedFrom
 
         else:
-            return True, None
+            raise ValueError("memory_type must be either 'episodic' or 'semantic'")
 
-    def add(self, mem: List) -> None:
-        """Append a memory to the long-term memory system.
+        # Optional qualifiers
+        if event:
+            qualifiers[humemai.event] = event
+
+        qualifiers[humemai.recalled] = 0  # Initialize 'recalled' qualifier to 0
+
+        self.add_memory(triples, qualifiers)
+
+    def get_memories(
+        self,
+        subject: URIRef = None,
+        predicate: URIRef = None,
+        object_: URIRef = None,
+        location: str = None,
+        emotion: str = None,
+        derivedFrom: str = None,
+        strength: int = None,
+        recalled: int = None,
+        event: str = None,
+        lower_time_bound: str = None,
+        upper_time_bound: str = None,
+    ) -> "Memory":
+        """
+        Retrieve memories with optional filtering based on the qualifiers and triple values, including time bounds.
 
         Args:
-            mem: A memory as a quadruple: [head, relation, tail, qualifiers]
+            subject (URIRef, optional): Filter by subject URI.
+            predicate (URIRef, optional): Filter by predicate URI.
+            object_ (URIRef, optional): Filter by object URI.
+            location (str, optional): Filter by location value.
+            emotion (str, optional): Filter by emotion value.
+            derivedFrom (str, optional): Filter by derivedFrom value.
+            strength (int, optional): Filter by strength value.
+            recalled (int, optional): Filter by recalled value.
+            event (str, optional): Filter by event value.
+            lower_time_bound (str, optional): Lower bound for time filtering (ISO format).
+            upper_time_bound (str, optional): Upper bound for time filtering (ISO format).
+
+        Returns:
+            Memory: A new Memory object containing the filtered memories.
         """
-        check, _ = self.can_be_added(mem)
-        if not check:
-            raise ValueError("Cannot add memory to LongMemory.")
 
-        added = False
+        # SPARQL query to retrieve memories with optional filters
+        query = """
+        PREFIX humemai: <https://humem.ai/ontology/>
+        PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+        PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
 
-        for entry in self.entries:
-            if entry[:-1] == mem[:-1]:
-                # Merge 'timestamp' values if present in both dictionaries
-                if "timestamp" in entry[-1] and "timestamp" in mem[-1]:
-                    entry[-1]["timestamp"] = sorted(
-                        entry[-1]["timestamp"] + mem[-1]["timestamp"]
+        SELECT ?statement ?subject ?predicate ?object
+        WHERE {
+            ?statement rdf:type rdf:Statement ;
+                    rdf:subject ?subject ;
+                    rdf:predicate ?predicate ;
+                    rdf:object ?object .
+        """
+
+        # Add filters dynamically based on input
+        if subject is not None:
+            query += f"FILTER(?subject = <{subject}>) .\n"
+        if predicate is not None:
+            query += f"FILTER(?predicate = <{predicate}>) .\n"
+        if object_ is not None:
+            query += f"FILTER(?object = <{object_}>) .\n"
+        if location is not None:
+            query += f'?statement humemai:location "{location}" .\n'
+        if emotion is not None:
+            query += f'?statement humemai:emotion "{emotion}" .\n'
+        if derivedFrom is not None:
+            query += f'?statement humemai:derivedFrom "{derivedFrom}" .\n'
+        if strength is not None:
+            query += f'?statement humemai:strength "{strength}" .\n'
+        if recalled is not None:
+            query += f'?statement humemai:recalled "{recalled}" .\n'
+        if event is not None:
+            query += f'?statement humemai:event "{event}" .\n'
+
+        # Add time filtering logic (both currentTime and time)
+        if lower_time_bound and upper_time_bound:
+            time_filter = f"""
+            OPTIONAL {{ ?statement humemai:currentTime ?currentTime }}
+            OPTIONAL {{ ?statement humemai:time ?time }}
+            FILTER((?currentTime >= "{lower_time_bound}"^^xsd:dateTime && ?currentTime <= "{upper_time_bound}"^^xsd:dateTime) ||
+                (?time >= "{lower_time_bound}"^^xsd:dateTime && ?time <= "{upper_time_bound}"^^xsd:dateTime)) .
+            """
+            query += time_filter
+
+        # Close the WHERE block
+        query += "}"
+
+        logger.debug(f"Executing SPARQL query:\n{query}")
+
+        # Execute the SPARQL query
+        results = self.graph.query(query)
+
+        # To store reified statements and their corresponding qualifiers
+        statement_dict = {}
+
+        # Iterate through the results and organize them
+        for row in results:
+            subj = row.subject
+            pred = row.predicate
+            obj = row.object
+
+            # The reified statement
+            statement = row.statement
+
+            # Create a key from the reified statement (not just the triple)
+            if statement not in statement_dict:
+                statement_dict[statement] = {
+                    "triple": (subj, pred, obj),
+                    "qualifiers": {},
+                }
+
+            # Add all the qualifiers related to the reified statement
+            for qualifier_pred, qualifier_obj in self.graph.predicate_objects(
+                statement
+            ):
+                if qualifier_pred not in (
+                    RDF.type,
+                    RDF.subject,
+                    RDF.predicate,
+                    RDF.object,
+                ):
+                    statement_dict[statement]["qualifiers"][str(qualifier_pred)] = str(
+                        qualifier_obj
                     )
-                elif "timestamp" in mem[-1]:
-                    entry[-1]["timestamp"] = mem[-1]["timestamp"]
 
-                # Sum 'strength' values if present in both dictionaries
-                if "strength" in entry[-1] and "strength" in mem[-1]:
-                    entry[-1]["strength"] += mem[-1]["strength"]
-                elif "strength" in mem[-1]:
-                    entry[-1]["strength"] = mem[-1]["strength"]
+        # Create a new Memory object to store the filtered results
+        filtered_memory = Memory(self.verbose_repr)
 
-                added = True
-                break
+        # Populate the Memory object with the main triples and their qualifiers
+        for statement, data in statement_dict.items():
+            subj, pred, obj = data["triple"]
+            qualifiers = data["qualifiers"]
 
-        if not added:
-            super().add(mem)
+            # Add the main triple to the graph
+            filtered_memory.graph.add((subj, pred, obj))
 
-    def forget_by_selection(
-        self, selection: Literal["oldest", "latest", "weakest", "strongest"]
-    ) -> None:
-        """Forget a memory by selection.
+            # Create a reified statement (blank node)
+            new_statement = BNode()
+            filtered_memory.graph.add((new_statement, RDF.type, RDF.Statement))
+            filtered_memory.graph.add((new_statement, RDF.subject, subj))
+            filtered_memory.graph.add((new_statement, RDF.predicate, pred))
+            filtered_memory.graph.add((new_statement, RDF.object, obj))
+
+            # Add the qualifiers for the reified statement
+            for qualifier_pred, qualifier_obj in qualifiers.items():
+                filtered_memory.graph.add(
+                    (new_statement, URIRef(qualifier_pred), Literal(qualifier_obj))
+                )
+
+        return filtered_memory
+
+    def get_triple_count(self) -> int:
+        """
+        Count the number of unique memories (subject-predicate-object triples) in the
+        graph. This does not count reified statements.
+
+        Returns:
+            int: The count of unique memories.
+        """
+        unique_memories = set()
+
+        # Iterate over reified statements and extract subject-predicate-object triples
+        for s, p, o in self.graph.triples((None, RDF.type, RDF.Statement)):
+            subj = self.graph.value(s, RDF.subject)
+            pred = self.graph.value(s, RDF.predicate)
+            obj = self.graph.value(s, RDF.object)
+
+            unique_memories.add((subj, pred, obj))
+
+        return len(unique_memories)
+
+    def get_memory_count(self) -> int:
+        """
+        Count the number of reified statements (RDF statements) in the graph.
+        This counts the reified statements instead of just the main triples.
+
+        Returns:
+            int: The count of reified statements.
+        """
+        statement_count = 0
+
+        # Iterate over all subjects of type rdf:Statement (reified statements)
+        for _ in self.graph.subjects(RDF.type, RDF.Statement):
+            statement_count += 1
+
+        return statement_count
+
+    def modify_strength(
+        self, filters: dict, increment_by: int = None, multiply_by: float = None
+    ):
+        """
+        Modify the strength of long-term memories by incrementing/decrementing or multiplying.
 
         Args:
-            selection: The selection method to use when forgetting a memory
+            filters (dict): Filters to identify the memory, including subject, predicate, object, and any qualifiers.
+            increment_by (int, optional): Increment or decrement the strength value by this amount.
+            multiply_by (float, optional): Multiply the strength value by this factor. Rounded to the nearest integer.
+        """
+        logger.debug(
+            f"Modifying strength with filters: {filters}, increment_by: {increment_by}, multiply_by: {multiply_by}"
+        )
+
+        subject_filter = filters.get("subject")
+
+        # SPARQL query to retrieve all reified statements with the same subject, predicate, and object, that have a strength qualifier
+        query = f"""
+        PREFIX humemai: <https://humem.ai/ontology/>
+        PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+        PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
+
+        SELECT ?statement ?subject ?predicate ?object ?strength
+        WHERE {{
+            ?statement rdf:type rdf:Statement ;
+                    rdf:subject ?subject ;
+                    rdf:predicate ?predicate ;
+                    rdf:object ?object ;
+                    humemai:strength ?strength .
+            FILTER(?subject = <{subject_filter}>)
+        }}
         """
 
-        if selection == "oldest":
-            mem_oldest = self.retrieve_memory_by_qualifier(
-                "timestamp", "list", "min", "max"
+        logger.debug(f"Executing SPARQL query:\n{query}")
+
+        # Execute the query
+        results = self.graph.query(query)
+
+        # Iterate over the matching results and modify the strength for each reified statement
+        for row in results:
+            statement = row.statement
+            current_strength = int(row.strength)
+            new_strength = current_strength
+
+            logger.debug(
+                f"Processing statement: {statement}, current strength: {current_strength}"
             )
 
-            if mem_oldest is None:
-                raise ValueError("There is no 'timestamp' key in any memory.")
-            self.forget(mem_oldest)
+            # Apply increment/decrement if specified
+            if increment_by is not None:
+                new_strength += increment_by
+                logger.debug(
+                    f"Strength incremented by {increment_by}. New value: {new_strength}"
+                )
 
-        elif selection == "latest":
-            mem_latest = self.retrieve_memory_by_qualifier(
-                "timestamp", "list", "max", "max"
+            # Apply multiplication if specified
+            if multiply_by is not None:
+                new_strength = round(current_strength * multiply_by)
+                logger.debug(
+                    f"Strength multiplied by {multiply_by}. New value: {new_strength}"
+                )
+
+            # Ensure the strength remains a positive integer
+            new_strength = max(new_strength, 0)
+
+            # Update the graph with the new strength value for this statement
+            self.graph.set(
+                (
+                    statement,
+                    URIRef("https://humem.ai/ontology/strength"),
+                    Literal(new_strength, datatype=XSD.integer),
+                )
+            )
+            logger.debug(
+                f"Updated strength for statement: {statement} to {new_strength}"
             )
 
-            if mem_latest is None:
-                raise ValueError("There is no 'timestamp' key in any memory.")
-            self.forget(mem_latest)
+    def modify_episodic_event(
+        self,
+        upper_time_bound: str,
+        lower_time_bound: str,
+        new_event: str,
+        subject: URIRef = None,
+        predicate: URIRef = None,
+        object_: URIRef = None,
+        location: str = None,
+        emotion: str = None,
+    ):
+        """
+        Modify the event value for episodic memories that fall within a specific time range and optional filters.
 
-        elif selection == "weakest":
-            mem_weakest = self.retrieve_memory_by_qualifier("strength", "int", "min")
+        Args:
+            upper_time_bound (str): The upper bound for time filtering (ISO format).
+            lower_time_bound (str): The lower bound for time filtering (ISO format).
+            new_event (str): The new value for the event qualifier.
+            subject (URIRef, optional): Filter by subject URI.
+            predicate (URIRef, optional): Filter by predicate URI.
+            object_ (URIRef, optional): Filter by object URI.
+            location (str, optional): Filter by location value.
+            emotion (str, optional): Filter by emotion value.
+        """
+        # SPARQL query to find all reified statements with filters and time bounds
+        query = """
+        PREFIX humemai: <https://humem.ai/ontology/>
+        PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+        PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
 
-            if mem_weakest is None:
-                raise ValueError("There is no 'strength' key in any memory.")
-            self.forget(mem_weakest)
+        SELECT ?statement ?subject ?predicate ?object
+        WHERE {
+            ?statement rdf:type rdf:Statement ;
+                    rdf:subject ?subject ;
+                    rdf:predicate ?predicate ;
+                    rdf:object ?object ;
+                    humemai:time ?time .
+        """
 
-        elif selection == "strongest":
-            mem_strongest = self.retrieve_memory_by_qualifier("strength", "int", "max")
+        # Add filters dynamically based on input
+        if subject is not None:
+            query += f"FILTER(?subject = <{subject}>) .\n"
+        if predicate is not None:
+            query += f"FILTER(?predicate = <{predicate}>) .\n"
+        if object_ is not None:
+            query += f"FILTER(?object = <{object_}>) .\n"
+        if location is not None:
+            query += f'?statement humemai:location "{location}" .\n'
+        if emotion is not None:
+            query += f'?statement humemai:emotion "{emotion}" .\n'
 
-            if mem_strongest is None:
-                raise ValueError("There is no 'strength' key in any memory.")
-            self.forget(mem_strongest)
+        # Add time range filter
+        query += f"""
+        FILTER(?time >= "{lower_time_bound}"^^xsd:dateTime && ?time <= "{upper_time_bound}"^^xsd:dateTime) .
+        }}
 
+        """
+
+        logger.debug(f"Executing SPARQL query to find episodic memories:\n{query}")
+
+        # Execute the SPARQL query
+        results = self.graph.query(query)
+
+        # Modify the event value for all matching reified statements
+        for row in results:
+            statement = row.statement
+
+            # Log the statement that will be modified
+            logger.debug(f"Modifying event for statement: {statement}")
+
+            # Set the new event value for each matching reified statement
+            self.graph.set(
+                (
+                    statement,
+                    URIRef("https://humem.ai/ontology/event"),
+                    Literal(new_event),
+                )
+            )
+            logger.debug(f"Set new event '{new_event}' for statement: {statement}")
+
+    def increment_recalled(
+        self,
+        subject: URIRef = None,
+        predicate: URIRef = None,
+        object_: URIRef = None,
+        location: str = None,
+        emotion: str = None,
+        derivedFrom: str = None,
+        strength: int = None,
+        lower_time_bound: str = None,
+        upper_time_bound: str = None,
+    ):
+        """
+        Increment the 'recalled' value for memories (episodic or semantic) that match the filters.
+
+        Args:
+            subject (URIRef, optional): Filter by subject URI.
+            predicate (URIRef, optional): Filter by predicate URI.
+            object_ (URIRef, optional): Filter by object URI.
+            location (str, optional): Filter by location value.
+            emotion (str, optional): Filter by emotion value.
+            derivedFrom (str, optional): Filter by derivedFrom value.
+            strength (int, optional): Filter by strength value.
+            lower_time_bound (str, optional): Lower bound for time filtering (ISO format).
+            upper_time_bound (str, optional): Upper bound for time filtering (ISO format).
+        """
+
+        # SPARQL query to find reified statements with optional filters
+        query = """
+        PREFIX humemai: <https://humem.ai/ontology/>
+        PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+        PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
+
+        SELECT ?statement ?subject ?predicate ?object ?recalled
+        WHERE {
+            ?statement rdf:type rdf:Statement ;
+                    rdf:subject ?subject ;
+                    rdf:predicate ?predicate ;
+                    rdf:object ?object .
+        """
+
+        # Add filters dynamically based on input
+        if subject is not None:
+            query += f"FILTER(?subject = <{subject}>) .\n"
+        if predicate is not None:
+            query += f"FILTER(?predicate = <{predicate}>) .\n"
+        if object_ is not None:
+            query += f"FILTER(?object = <{object_}>) .\n"
+        if location is not None:
+            query += f'?statement humemai:location "{location}" .\n'
+        if emotion is not None:
+            query += f'?statement humemai:emotion "{emotion}" .\n'
+        if derivedFrom is not None:
+            query += f'?statement humemai:derivedFrom "{derivedFrom}" .\n'
+        if strength is not None:
+            query += f'?statement humemai:strength "{strength}" .\n'
+
+        # Add time filtering logic (both currentTime and time)
+        if lower_time_bound and upper_time_bound:
+            time_filter = f"""
+            OPTIONAL {{ ?statement humemai:currentTime ?currentTime }}
+            OPTIONAL {{ ?statement humemai:time ?time }}
+            FILTER((?currentTime >= "{lower_time_bound}"^^xsd:dateTime && ?currentTime <= "{upper_time_bound}"^^xsd:dateTime) ||
+                (?time >= "{lower_time_bound}"^^xsd:dateTime && ?time <= "{upper_time_bound}"^^xsd:dateTime)) .
+            """
+            query += time_filter
+
+        # Add OPTIONAL to retrieve the recalled value (if it exists)
+        query += """
+        OPTIONAL { ?statement humemai:recalled ?recalled }
+        }
+        """
+
+        logger.debug(f"Executing SPARQL query:\n{query}")
+
+        # Execute the SPARQL query to retrieve matching reified statements
+        results = self.graph.query(query)
+
+        # Iterate through the results to increment the recalled value
+        for row in results:
+            statement = row.statement
+            current_recalled_value = row.recalled
+
+            if current_recalled_value is not None:
+                # If 'recalled' exists, increment it by 1
+                new_recalled_value = int(current_recalled_value) + 1
+            else:
+                # If 'recalled' does not exist, initialize it to 1 (default is 0)
+                new_recalled_value = 1
+
+            # Update or add the new 'recalled' value in the graph
+            self.graph.set(
+                (
+                    statement,
+                    URIRef("https://humem.ai/ontology/recalled"),
+                    Literal(new_recalled_value, datatype=XSD.integer),
+                )
+            )
+
+            logger.debug(
+                f"Updated recalled for statement {statement} to {new_recalled_value}"
+            )
+
+    def __repr__(self) -> str:
+        if self.verbose_repr:
+            memory_strings = []
+            for statement in self.graph.subjects(RDF.type, RDF.Statement):
+                subj = self.graph.value(statement, RDF.subject)
+                pred = self.graph.value(statement, RDF.predicate)
+                obj = self.graph.value(statement, RDF.object)
+                qualifiers = {}
+
+                for q_pred, q_obj in self.graph.predicate_objects(statement):
+                    if q_pred not in (RDF.type, RDF.subject, RDF.predicate, RDF.object):
+                        qualifiers[str(q_pred)] = str(q_obj)
+
+                memory_strings.append(f"[{subj}, {pred}, {obj}, {qualifiers}]")
+
+            return "\n".join(memory_strings)
         else:
-            raise ValueError(
-                "Invalid selection. Please choose from "
-                "'oldest', 'latest', 'weakest', 'strongest'."
-            )
+            memory_strings = []
+            for statement in self.graph.subjects(RDF.type, RDF.Statement):
+                subj = self._strip_namespace(self.graph.value(statement, RDF.subject))
+                pred = self._strip_namespace(self.graph.value(statement, RDF.predicate))
+                obj = self._strip_namespace(self.graph.value(statement, RDF.object))
+                qualifiers = {}
 
-    def decay(self) -> None:
-        """Decay the strength of the memory. The strength is always integer."""
-        if self.semantic_decay_factor < 1.0:
-            for mem in self.entries:
-                if "strength" in mem[-1]:
-                    mem[-1]["strength"] = max(
-                        mem[-1]["strength"] * self.semantic_decay_factor,
-                        self.min_strength,
+                for q_pred, q_obj in self.graph.predicate_objects(statement):
+                    if q_pred not in (RDF.type, RDF.subject, RDF.predicate, RDF.object):
+                        qualifiers[self._strip_namespace(q_pred)] = str(q_obj)
+
+                memory_strings.append(f"[{subj}, {pred}, {obj}, {qualifiers}]")
+
+            return "\n".join(memory_strings)
+
+    def _strip_namespace(self, uri):
+        """
+        Helper function to strip the namespace and return the last part of a URIRef.
+
+        Args:
+            uri (URIRef or Literal): The URIRef to process.
+
+        Returns:
+            str: The last part of the URI after the last '/' or '#'.
+        """
+        if isinstance(uri, URIRef):
+            return uri.split("/")[-1].split("#")[-1]
+        return str(uri)
+
+    def is_reified_statement_short_term(self, statement) -> bool:
+        """
+        Check if a given reified statement is a short-term memory by verifying if it
+        has a 'currentTime' qualifier.
+
+        Args:
+            statement (BNode or URIRef): The reified statement to check.
+
+        Returns:
+            bool: True if it's a short-term memory, False otherwise.
+        """
+        current_time = self.graph.value(
+            statement, URIRef("https://humem.ai/ontology/currentTime")
+        )
+        return current_time is not None
+
+    def _add_reified_statement_to_working_memory_and_increment_recall(
+        self,
+        subj: URIRef,
+        pred: URIRef,
+        obj: URIRef,
+        working_memory: "Memory",
+        specific_statement=None,
+    ):
+        """
+        Helper method to add all reified statements (including qualifiers) of a given triple
+        to the working memory and increment the recall count for each reified statement.
+
+        Args:
+            subj (URIRef): Subject of the triple.
+            pred (URIRef): Predicate of the triple.
+            obj (URIRef): Object of the triple.
+            working_memory (Memory): The working memory to which the statements and qualifiers are added.
+            specific_statement (BNode or URIRef, optional): A specific reified statement to process, if provided.
+        """
+        # Find all reified statements for this triple
+        for statement in self.graph.subjects(RDF.type, RDF.Statement):
+            s = self.graph.value(statement, RDF.subject)
+            p = self.graph.value(statement, RDF.predicate)
+            o = self.graph.value(statement, RDF.object)
+
+            if (
+                s == subj
+                and p == pred
+                and o == obj
+                and (specific_statement is None or statement == specific_statement)
+            ):
+                logger.debug(f"Processing reified statement: {statement}")
+
+                # Retrieve the current recalled value
+                recalled_value = 0
+                for _, _, recalled in self.graph.triples(
+                    (statement, URIRef("https://humem.ai/ontology/recalled"), None)
+                ):
+                    recalled_value = int(recalled)
+
+                # Increment the recalled value in the long-term memory for this reified statement
+                new_recalled_value = recalled_value + 1
+                self.graph.set(
+                    (
+                        statement,
+                        URIRef("https://humem.ai/ontology/recalled"),
+                        Literal(new_recalled_value, datatype=XSD.integer),
                     )
+                )
+                logger.debug(
+                    f"Updated recalled for statement {statement} to {new_recalled_value}"
+                )
 
-    def count_memories(self) -> Tuple[int, int]:
-        """Count the memories with qualifiers, "timestamp" and "strength", respectively.
+                # Now, add the updated reified statement to the working memory
+                for stmt_p, stmt_o in self.graph.predicate_objects(statement):
+                    if stmt_p == URIRef("https://humem.ai/ontology/recalled"):
+                        working_memory.graph.add(
+                            (
+                                statement,
+                                stmt_p,
+                                Literal(new_recalled_value, datatype=XSD.integer),
+                            )
+                        )
+                        logger.debug(
+                            f"Added updated recalled value ({new_recalled_value}) to working memory for statement: {statement}"
+                        )
+                    else:
+                        working_memory.graph.add((statement, stmt_p, stmt_o))
+                        logger.debug(
+                            f"Added reified statement triple to working memory: ({statement}, {stmt_p}, {stmt_o})"
+                        )
+
+    def _get_short_term_memories_with_current_time(self) -> "Memory":
+        """
+        Query the RDF graph to retrieve all short-term memories with a currentTime qualifier
+        and include all associated qualifiers (e.g., location, emotion, etc.).
 
         Returns:
-            number of "timestamp" memories, number of "strength" memories
-
+            Memory: A Memory object containing all short-term memories with their qualifiers.
         """
-        num_timestamps = 0
-        num_strengths = 0
+        short_term_memory = Memory(self.verbose_repr)
 
-        for mem in self.to_list():
-            if "timestamp" in mem[-1]:
-                num_timestamps += 1
-            if "strength" in mem[-1]:
-                num_strengths += 1
+        # SPARQL query to retrieve all reified statements with a currentTime qualifier, along with other qualifiers
+        query = """
+        PREFIX humemai: <https://humem.ai/ontology/>
+        PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
 
-        return num_timestamps, num_strengths
-
-    def pretrain_semantic(
-        self,
-        semantic_knowledge: List[List],
-    ) -> None:
-        """Pretrain (prepopulate) the semantic memory system.
-
-        Args:
-            semantic_knowledge: e.g., [["desk", "atlocation", "officeroom"],
-                ["chair", "atlocation", "officeroom"],
-                ["officeroom", "north", "livingroom"]]
-
+        SELECT ?statement ?subject ?predicate ?object ?qualifier_pred ?qualifier_obj
+        WHERE {
+            ?statement rdf:type rdf:Statement ;
+                    rdf:subject ?subject ;
+                    rdf:predicate ?predicate ;
+                    rdf:object ?object ;
+                    humemai:currentTime ?currentTime .
+            OPTIONAL { ?statement ?qualifier_pred ?qualifier_obj }
+        }
         """
-        self.semantic_knowledge = semantic_knowledge
-        for triple in self.semantic_knowledge:
-            assert len(triple) == 3, "Each semantic knowledge entry must be a triple."
-            if self.is_full:
-                break
-            mem = [*triple, {"strength": 1}]  # Initialize with strength 1
-            self.add(mem)
 
+        logger.debug(
+            f"Executing SPARQL query to retrieve short-term memories:\n{query}"
+        )
+        results = self.graph.query(query)
 
-class MemorySystems:
-    """Multiple memory systems class.
+        # Dictionary to store reified statements and their qualifiers
+        statement_dict = {}
 
-    This class puts the short-term and long-term memory systems together. By doing so,
-    it also creates a working memory system, which is a combination of the short-term
-    and partial long-term memory. The partial long-term memory is created by retrieving
-    memories from the long-term memory system based on the number of hops.
+        # Iterate through the results and organize the qualifiers for each reified statement
+        for row in results:
+            subj = row.subject
+            pred = row.predicate
+            obj = row.object
+            statement = row.statement
+            qualifier_pred = row.qualifier_pred
+            qualifier_obj = row.qualifier_obj
 
-    Attributes:
-        short: short-term memory system
-        long: long-term memory system
-        working: working memory system. This is short-term + partial long-term memory
-        qualifier_relations: relations that can be used as qualifiers
+            # Add the main triple to the memory graph if it's not already added
+            if statement not in statement_dict:
+                statement_dict[statement] = {
+                    "triple": (subj, pred, obj),
+                    "qualifiers": {},
+                }
 
-    """
+            # Store the qualifiers, excluding standard reification elements
+            if qualifier_pred and qualifier_pred not in (
+                RDF.type,
+                RDF.subject,
+                RDF.predicate,
+                RDF.object,
+            ):
+                statement_dict[statement]["qualifiers"][qualifier_pred] = qualifier_obj
 
-    def __init__(
-        self,
-        short: ShortMemory,
-        long: LongMemory,
-    ) -> None:
-        """Bundle memory systems.
+        # Populate the short-term memory object with triples and qualifiers
+        for statement, data in statement_dict.items():
+            subj, pred, obj = data["triple"]
+            qualifiers = data["qualifiers"]
 
-        Args:
-            short: short-term memory system
-            long: long-term memory system
+            # Add the main triple to the memory
+            short_term_memory.graph.add((subj, pred, obj))
 
-        """
-        self.short: ShortMemory = short
-        self.long: LongMemory = long
-        self.qualifier_relations: List[str] = ["current_time", "timestamp", "strength"]
+            # Create a reified statement and add all the qualifiers
+            reified_statement = BNode()
+            short_term_memory.graph.add((reified_statement, RDF.type, RDF.Statement))
+            short_term_memory.graph.add((reified_statement, RDF.subject, subj))
+            short_term_memory.graph.add((reified_statement, RDF.predicate, pred))
+            short_term_memory.graph.add((reified_statement, RDF.object, obj))
 
-    def forget_all(self) -> None:
-        """Forget everything in the memory systems."""
-        self.short.forget_all()
-        self.long.forget_all()
+            # Add each qualifier to the reified statement
+            for qualifier_pred, qualifier_obj in qualifiers.items():
+                short_term_memory.graph.add(
+                    (reified_statement, qualifier_pred, qualifier_obj)
+                )
 
-    def get_working_memory(self, working_num_hops: Optional[int] = None) -> Memory:
-        """Get the working memory system. This is short-term + partial long-term memory.
-
-        Args:
-            working_num_hops: number of hops to consider when fetching long-term
-                memories
-
-        Returns:
-            working: Memory
-
-        """
-        if working_num_hops is not None:
-            raise NotImplementedError(
-                "Not implemented yet. Please set working_num_hops to None."
-            )
-
-        working: List[List] = []
-        working += self.short.entries
-        working += self.long.entries
-        working = merge_lists(working)
-
-        working_memory = Memory(len(working), working)
-
-        return working_memory
+        return short_term_memory
