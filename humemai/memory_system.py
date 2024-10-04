@@ -13,7 +13,7 @@ logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger("humemai.memory_system")
 
 # Define custom namespace for humemai ontology
-humemai = Namespace("https://humem.ai/ontology/")
+humemai = Namespace("https://humem.ai/ontology#")
 
 
 class MemorySystem:

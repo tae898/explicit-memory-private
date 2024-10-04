@@ -1,0 +1,106 @@
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix owl: <http://www.w3.org/2002/07/owl#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+@prefix humemai: <https://humem.ai/ontology#> .
+
+### Ontology metadata
+<https://humem.ai/ontology>
+    rdf:type owl:Ontology ;
+    rdfs:label "HumemAI Ontology" ;
+    rdfs:comment "An ontology for representing memories, events, and related concepts in HumemAI." ;
+    owl:versionInfo "1.0" .
+
+### Classes ###
+humemai:Event rdf:type owl:Class ;
+    rdfs:label "Event" ;
+    rdfs:comment "A class representing an event, such as a conference, meeting, or gathering." .
+
+### Positive Integer Definition ###
+humemai:PositiveInteger rdf:type rdfs:Datatype ;
+    rdfs:label "Positive Integer" ;
+    rdfs:comment "A positive integer (greater than 0)" ;
+    owl:equivalentClass [
+        rdf:type rdfs:Datatype ;
+        owl:onDatatype xsd:integer ;
+        owl:withRestrictions (
+            [ xsd:minInclusive "1"^^xsd:integer ]
+        )
+    ] .
+
+### Emotion Enumeration ###
+humemai:Emotion rdf:type owl:Class ;
+    rdfs:label "Emotion" ;
+    rdfs:comment "A class representing allowed emotions for episodic memories." ;
+    owl:oneOf ( humemai:Neutral humemai:Joy humemai:Surprise humemai:Anger humemai:Sadness humemai:Disgust humemai:Fear ) .
+
+humemai:Neutral rdf:type owl:NamedIndividual, humemai:Emotion ;
+    rdfs:label "Neutral" .
+
+humemai:Joy rdf:type owl:NamedIndividual, humemai:Emotion ;
+    rdfs:label "Joy" .
+
+humemai:Surprise rdf:type owl:NamedIndividual, humemai:Emotion ;
+    rdfs:label "Surprise" .
+
+humemai:Anger rdf:type owl:NamedIndividual, humemai:Emotion ;
+    rdfs:label "Anger" .
+
+humemai:Sadness rdf:type owl:NamedIndividual, humemai:Emotion ;
+    rdfs:label "Sadness" .
+
+humemai:Disgust rdf:type owl:NamedIndividual, humemai:Emotion ;
+    rdfs:label "Disgust" .
+
+humemai:Fear rdf:type owl:NamedIndividual, humemai:Emotion ;
+    rdfs:label "Fear" .
+
+### Data Properties ###
+humemai:currentTime rdf:type owl:DatatypeProperty ;
+    rdfs:label "currentTime" ;
+    rdfs:domain rdf:Statement ;
+    rdfs:range xsd:dateTime ;
+    rdfs:comment "The current timestamp of a memory in short-term memory." .
+
+humemai:eventTime rdf:type owl:DatatypeProperty ;
+    rdfs:label "eventTime" ;
+    rdfs:domain rdf:Statement ;
+    rdfs:range xsd:dateTime ;
+    rdfs:comment "The time when an episodic memory event occurred." .
+
+humemai:knownSince rdf:type owl:DatatypeProperty ;
+    rdfs:label "knownSince" ;
+    rdfs:domain rdf:Statement ;
+    rdfs:range xsd:dateTime ;
+    rdfs:comment "The time since a semantic memory has been known." .
+
+humemai:recalled rdf:type owl:DatatypeProperty ;
+    rdfs:label "recalled" ;
+    rdfs:domain rdf:Statement ;
+    rdfs:range humemai:PositiveInteger ;
+    rdfs:comment "Indicates how many times a memory has been recalled (must be positive)." .
+
+humemai:strength rdf:type owl:DatatypeProperty ;
+    rdfs:label "strength" ;
+    rdfs:domain rdf:Statement ;
+    rdfs:range humemai:PositiveInteger ;
+    rdfs:comment "Represents the strength of a semantic memory (must be positive)." .
+
+humemai:derivedFrom rdf:type owl:DatatypeProperty ;
+    rdfs:label "derivedFrom" ;
+    rdfs:domain rdf:Statement ;
+    rdfs:range xsd:string ;
+    rdfs:comment "Indicates the origin of the semantic memory (e.g., observation, conversation)." .
+
+humemai:location rdf:type owl:DatatypeProperty ;
+    rdfs:label "location" ;
+    rdfs:domain rdf:Statement ;
+    rdfs:range xsd:string ;
+    rdfs:comment "Location for episodic memories." .
+
+### Restricting the emotion property to the Emotion class ###
+humemai:emotion rdf:type owl:ObjectProperty ;
+    rdfs:label "emotion" ;
+    rdfs:domain rdf:Statement ;
+    rdfs:range humemai:Emotion ;
+    rdfs:comment "Emotion for episodic memories, restricted to [neutral, joy, surprise, anger, sadness, disgust, fear]." .

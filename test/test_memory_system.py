@@ -6,7 +6,7 @@ from rdflib import RDF, Literal, Namespace, URIRef
 from humemai import MemorySystem
 
 # Define the custom namespace for the ontology
-humemai = Namespace("https://humem.ai/ontology/")
+humemai = Namespace("https://humem.ai/ontology#")
 
 
 class TestMemorySystem(unittest.TestCase):

@@ -13,7 +13,7 @@ logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger("humemai.memory")
 
 # Define custom namespace for humemai ontology
-humemai = Namespace("https://humem.ai/ontology/")
+humemai = Namespace("https://humem.ai/ontology#")
 
 
 class Memory:
@@ -230,10 +230,10 @@ class Memory:
             triples (list): A list of triples to add.
             qualifiers (dict, optional): Additional qualifiers to add.
                 The qualifiers can have the following in URIRef format:
-                https://humem.ai/ontology/eventTime: str,
-                https://humem.ai/ontology/location: str,
-                https://humem.ai/ontology/emotion: str,
-                https://humem.ai/ontology/event: str,
+                https://humem.ai/ontology#eventTime: str,
+                https://humem.ai/ontology#location: str,
+                https://humem.ai/ontology#emotion: str,
+                https://humem.ai/ontology#event: str,
             event_properties (dict, optional): Additional properties for the event node.
                 The properties should be URIRef format.
 
@@ -260,12 +260,12 @@ class Memory:
 
         if humemai.event in qualifiers:
 
-            self.create_event_node(qualifiers[humemai.event])
+            self.add_event(qualifiers[humemai.event])
 
             if event_properties:
                 self.add_event_properties(qualifiers[humemai.event], event_properties)
 
-    def create_event_node(self, event: URIRef):
+    def add_event(self, event: URIRef):
         """
         Create an event node in the RDF graph with custom properties.
 
@@ -305,9 +305,9 @@ class Memory:
             triples (list): A list of triples to add.
             qualifiers (dict, optional): Additional qualifiers to add.
                 The qualifiers can have the following
-                https://humem.ai/ontology/knownSince: str,
-                https://humem.ai/ontology/derivedFrom: str,
-                https://humem.ai/ontology/strength: int,
+                https://humem.ai/ontology#knownSince: str,
+                https://humem.ai/ontology#derivedFrom: str,
+                https://humem.ai/ontology#strength: int,
 
 
         """
@@ -360,7 +360,7 @@ class Memory:
 
         # SPARQL query to retrieve memories with optional filters
         query = """
-        PREFIX humemai: <https://humem.ai/ontology/>
+        PREFIX humemai: <https://humem.ai/ontology#>
         PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
         PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
 
@@ -588,7 +588,7 @@ class Memory:
         # SPARQL query to retrieve all reified statements with the same subject,
         # predicate, and object, that have a strength qualifier
         query = f"""
-        PREFIX humemai: <https://humem.ai/ontology/>
+        PREFIX humemai: <https://humem.ai/ontology#>
         PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
         PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
 
@@ -639,7 +639,7 @@ class Memory:
             self.graph.set(
                 (
                     statement,
-                    URIRef("https://humem.ai/ontology/strength"),
+                    URIRef("https://humem.ai/ontology#strength"),
                     Literal(new_strength, datatype=XSD.integer),
                 )
             )
@@ -672,7 +672,7 @@ class Memory:
         """
         # Start building the SPARQL query to find all reified statements with filters and time bounds
         query = """
-        PREFIX humemai: <https://humem.ai/ontology/>
+        PREFIX humemai: <https://humem.ai/ontology#>
         PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
         PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
 
@@ -722,14 +722,14 @@ class Memory:
             self.graph.set(
                 (
                     statement,
-                    URIRef("https://humem.ai/ontology/event"),
+                    URIRef("https://humem.ai/ontology#event"),
                     Literal(new_event),
                 )
             )
             logger.debug(f"Set new event '{new_event}' for statement: {statement}")
 
             # Create the event node if it doesn't exist
-            self.create_event_node(new_event)
+            self.add_event(new_event)
 
     def increment_recalled(
         self,
@@ -755,7 +755,7 @@ class Memory:
 
         # Start building the SPARQL query to find reified statements with filters
         query = """
-        PREFIX humemai: <https://humem.ai/ontology/>
+        PREFIX humemai: <https://humem.ai/ontology#>
         PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
         PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
 
@@ -822,7 +822,7 @@ class Memory:
             self.graph.set(
                 (
                     statement,
-                    URIRef("https://humem.ai/ontology/recalled"),
+                    URIRef("https://humem.ai/ontology#recalled"),
                     Literal(new_recalled_value, datatype=XSD.integer),
                 )
             )
@@ -977,7 +977,7 @@ class Memory:
 
         # SPARQL query to retrieve all reified statements with a currentTime qualifier, along with other qualifiers
         query = """
-        PREFIX humemai: <https://humem.ai/ontology/>
+        PREFIX humemai: <https://humem.ai/ontology#>
         PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
 
         SELECT ?statement ?subject ?predicate ?object ?qualifier_pred ?qualifier_obj
@@ -1062,7 +1062,7 @@ class Memory:
         # SPARQL query to retrieve all reified statements that have either eventTime or knownSince,
         # and do not have a currentTime qualifier
         query = """
-        PREFIX humemai: <https://humem.ai/ontology/>
+        PREFIX humemai: <https://humem.ai/ontology#>
         PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
 
         SELECT ?statement ?subject ?predicate ?object
@@ -1216,3 +1216,54 @@ class Memory:
         """
         for event_node in self.graph.subjects(RDF.type, humemai.Event):
             yield event_node
+
+    def get_events(self) -> list:
+        """
+        Retrieve all triples where an Event entity is involved either as the subject or the object.
+
+        Returns:
+            list: A list of triples where the Event entity is involved.
+        """
+        event_triples = []
+
+        # Find all triples where the subject is of type Event
+        for event_node in self.graph.subjects(RDF.type, humemai.Event):
+            # Get all triples where this event node is either subject or object
+            for s, p, o in self.graph.triples((event_node, None, None)):
+                event_triples.append((s, p, o))
+            for s, p, o in self.graph.triples((None, None, event_node)):
+                event_triples.append((s, p, o))
+
+        return event_triples
+
+    def print_events(self):
+        """
+        Print all triples where an Event entity is involved either as the subject or the object
+        in a readable format.
+        """
+        event_triples = self.get_events()
+
+        if not event_triples:
+            print("No events found.")
+            return
+
+        print("Event-related triples:")
+        if self.verbose_repr:
+            for subj, pred, obj in event_triples:
+                if pred == humemai.event or pred == RDF.type:
+                    continue
+                print(f"({subj}, {pred}, {obj})")
+        else:
+            for subj, pred, obj in event_triples:
+                if pred == humemai.event or pred == RDF.type:
+                    continue
+                subj_str = self._strip_namespace(subj)
+                pred_str = self._strip_namespace(pred)
+                obj_str = self._strip_namespace(obj)
+                print(f"({subj_str}, {pred_str}, {obj_str})")
+
+    def print_memories(self):
+        """
+        Print all memories in the graph in a readable format.
+        """
+        print(self)

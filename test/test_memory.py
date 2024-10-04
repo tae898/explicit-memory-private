@@ -10,7 +10,7 @@ from rdflib import RDF, XSD, BNode, Graph, Literal, Namespace, URIRef
 from humemai import Memory
 
 # Define custom namespace for humemai ontology
-humemai = Namespace("https://humem.ai/ontology/")
+humemai = Namespace("https://humem.ai/ontology#")
 
 
 class TestMemory(unittest.TestCase):
@@ -41,7 +41,7 @@ class TestMemory(unittest.TestCase):
         # Verify memory has been added correctly
         result = repr(self.memory)
 
-        expected = "[https://example.org/person/Alice, https://example.org/relationship/knows, https://example.org/person/Bob, {rdflib.term.URIRef('https://humem.ai/ontology/memoryID'): rdflib.term.Literal('0', datatype=rdflib.term.URIRef('http://www.w3.org/2001/XMLSchema#integer')), rdflib.term.URIRef('https://humem.ai/ontology/currentTime'): rdflib.term.Literal('2024-04-27T10:00:00', datatype=rdflib.term.URIRef('http://www.w3.org/2001/XMLSchema#dateTime')), rdflib.term.URIRef('https://humem.ai/ontology/location'): rdflib.term.Literal('New York')}]"
+        expected = "[https://example.org/person/Alice, https://example.org/relationship/knows, https://example.org/person/Bob, {rdflib.term.URIRef('https://humem.ai/ontology#memoryID'): rdflib.term.Literal('0', datatype=rdflib.term.URIRef('http://www.w3.org/2001/XMLSchema#integer')), rdflib.term.URIRef('https://humem.ai/ontology#currentTime'): rdflib.term.Literal('2024-04-27T10:00:00', datatype=rdflib.term.URIRef('http://www.w3.org/2001/XMLSchema#dateTime')), rdflib.term.URIRef('https://humem.ai/ontology#location'): rdflib.term.Literal('New York')}]"
 
         self.assertIn(expected, result)
 
@@ -73,8 +73,8 @@ class TestMemory(unittest.TestCase):
         result = repr(self.memory)
 
         # Adjust expected output to match the verbose output with rdflib objects
-        expected1 = "[https://example.org/person/Alice, https://example.org/relationship/knows, https://example.org/person/Bob, {rdflib.term.URIRef('https://humem.ai/ontology/memoryID'): rdflib.term.Literal('0', datatype=rdflib.term.URIRef('http://www.w3.org/2001/XMLSchema#integer')), rdflib.term.URIRef('https://humem.ai/ontology/currentTime'): rdflib.term.Literal('2024-04-27T10:00:00', datatype=rdflib.term.URIRef('http://www.w3.org/2001/XMLSchema#dateTime')), rdflib.term.URIRef('https://humem.ai/ontology/location'): rdflib.term.Literal('New York')}]"
-        expected2 = "[https://example.org/person/Alice, https://example.org/relationship/knows, https://example.org/person/Bob, {rdflib.term.URIRef('https://humem.ai/ontology/memoryID'): rdflib.term.Literal('1', datatype=rdflib.term.URIRef('http://www.w3.org/2001/XMLSchema#integer')), rdflib.term.URIRef('https://humem.ai/ontology/currentTime'): rdflib.term.Literal('2024-04-27T12:00:00', datatype=rdflib.term.URIRef('http://www.w3.org/2001/XMLSchema#dateTime')), rdflib.term.URIRef('https://humem.ai/ontology/location'): rdflib.term.Literal('London')}]"
+        expected1 = "[https://example.org/person/Alice, https://example.org/relationship/knows, https://example.org/person/Bob, {rdflib.term.URIRef('https://humem.ai/ontology#memoryID'): rdflib.term.Literal('0', datatype=rdflib.term.URIRef('http://www.w3.org/2001/XMLSchema#integer')), rdflib.term.URIRef('https://humem.ai/ontology#currentTime'): rdflib.term.Literal('2024-04-27T10:00:00', datatype=rdflib.term.URIRef('http://www.w3.org/2001/XMLSchema#dateTime')), rdflib.term.URIRef('https://humem.ai/ontology#location'): rdflib.term.Literal('New York')}]"
+        expected2 = "[https://example.org/person/Alice, https://example.org/relationship/knows, https://example.org/person/Bob, {rdflib.term.URIRef('https://humem.ai/ontology#memoryID'): rdflib.term.Literal('1', datatype=rdflib.term.URIRef('http://www.w3.org/2001/XMLSchema#integer')), rdflib.term.URIRef('https://humem.ai/ontology#currentTime'): rdflib.term.Literal('2024-04-27T12:00:00', datatype=rdflib.term.URIRef('http://www.w3.org/2001/XMLSchema#dateTime')), rdflib.term.URIRef('https://humem.ai/ontology#location'): rdflib.term.Literal('London')}]"
 
         # Ensure both entries are present
         self.assertIn(expected1, result)
@@ -126,7 +126,7 @@ class TestMemoryDelete(unittest.TestCase):
         Set up a fresh Memory instance before each test.
         """
         self.memory = Memory(verbose_repr=True)
-        self.humemai = Namespace("https://humem.ai/ontology/")
+        self.humemai = Namespace("https://humem.ai/ontology#")
 
         # Define sample triples
         self.triple1 = (
@@ -168,7 +168,7 @@ class TestMemoryDelete(unittest.TestCase):
         # Ensure the memory is there before deletion
         before_delete = repr(self.memory)
         self.assertIn("https://example.org/person/Alice", before_delete)
-        self.assertIn("https://humem.ai/ontology/location", before_delete)
+        self.assertIn("https://humem.ai/ontology#location", before_delete)
 
         # Delete the triple (Alice knows Bob)
         self.memory.delete_triple(*self.triple1)
@@ -186,7 +186,7 @@ class TestMemoryDelete(unittest.TestCase):
         # Ensure that the other memory still exists (Bob likes Chocolate)
         self.assertIn("https://example.org/person/Bob", after_delete)
         self.assertIn(
-            "https://humem.ai/ontology/location", after_delete
+            "https://humem.ai/ontology#location", after_delete
         )  # The other qualifier
 
     def test_delete_triple_with_multiple_qualifiers(self):
@@ -273,7 +273,7 @@ class TestMemoryShortTerm(unittest.TestCase):
         Set up a fresh Memory instance before each test.
         """
         self.memory = Memory(verbose_repr=True)
-        self.humemai = Namespace("https://humem.ai/ontology/")
+        self.humemai = Namespace("https://humem.ai/ontology#")
 
     def test_add_single_short_term_memory(self):
         """
@@ -393,7 +393,7 @@ class TestMemoryLongTerm(unittest.TestCase):
         Set up a fresh Memory instance before each test.
         """
         self.memory = Memory(verbose_repr=True)
-        self.humemai = Namespace("https://humem.ai/ontology/")
+        self.humemai = Namespace("https://humem.ai/ontology#")
 
     def test_add_single_episodic_memory(self):
         """
@@ -557,7 +557,7 @@ class TestMemoryGetMemories(unittest.TestCase):
         Set up a fresh Memory instance before each test.
         """
         self.memory = Memory(verbose_repr=True)
-        self.humemai = Namespace("https://humem.ai/ontology/")
+        self.humemai = Namespace("https://humem.ai/ontology#")
 
         # Define sample triples
         self.triple1 = (
@@ -710,7 +710,7 @@ class TestMemoryGetMemoryCount(unittest.TestCase):
         Set up a fresh Memory instance before each test.
         """
         self.memory = Memory(verbose_repr=True)
-        self.humemai = Namespace("https://humem.ai/ontology/")
+        self.humemai = Namespace("https://humem.ai/ontology#")
 
         # Define the triples
         self.triple1 = (
@@ -887,7 +887,7 @@ class TestMemoryModifyStrength(unittest.TestCase):
         Set up the Memory object and add some semantic and episodic memories.
         """
         self.memory = Memory(verbose_repr=True)
-        self.humemai = Namespace("https://humem.ai/ontology/")
+        self.humemai = Namespace("https://humem.ai/ontology#")
 
         # Define a semantic triple
         self.triple_semantic = (
@@ -1050,7 +1050,7 @@ class TestMemoryTimeFilters(unittest.TestCase):
         Set up a fresh Memory instance before each test.
         """
         self.memory = Memory(verbose_repr=True)
-        self.humemai = Namespace("https://humem.ai/ontology/")
+        self.humemai = Namespace("https://humem.ai/ontology#")
 
     def test_filter_memories_by_time_range(self):
         """
@@ -1132,7 +1132,7 @@ class TestMemoryLocationFilters(unittest.TestCase):
         Set up a fresh Memory instance before each test.
         """
         self.memory = Memory(verbose_repr=True)
-        self.humemai = Namespace("https://humem.ai/ontology/")
+        self.humemai = Namespace("https://humem.ai/ontology#")
 
     def test_filter_memories_by_location(self):
         """
@@ -1207,7 +1207,7 @@ class TestMemoryEmotionFilters(unittest.TestCase):
         Set up a fresh Memory instance before each test.
         """
         self.memory = Memory(verbose_repr=True)
-        self.humemai = Namespace("https://humem.ai/ontology/")
+        self.humemai = Namespace("https://humem.ai/ontology#")
 
     def test_filter_memories_by_emotion(self):
         """
@@ -1253,7 +1253,7 @@ class TestInvalidInputHandling(unittest.TestCase):
         Set up a fresh Memory instance before each test.
         """
         self.memory = Memory(verbose_repr=True)
-        self.humemai = Namespace("https://humem.ai/ontology/")
+        self.humemai = Namespace("https://humem.ai/ontology#")
 
     def test_invalid_time_format(self):
         """
@@ -1280,7 +1280,7 @@ class TestMemoryDeleteWithTime(unittest.TestCase):
         Set up a fresh Memory instance before each test.
         """
         self.memory = Memory(verbose_repr=True)
-        self.humemai = Namespace("https://humem.ai/ontology/")
+        self.humemai = Namespace("https://humem.ai/ontology#")
 
     def test_delete_triple_with_time_filter(self):
         """
@@ -1322,7 +1322,7 @@ class TestMemoryInvalidQualifiers(unittest.TestCase):
         Set up a fresh Memory instance before each test.
         """
         self.memory = Memory(verbose_repr=True)
-        self.humemai = Namespace("https://humem.ai/ontology/")
+        self.humemai = Namespace("https://humem.ai/ontology#")
 
     def test_missing_qualifiers_in_long_term_memory_episodic(self):
         """
@@ -1360,7 +1360,7 @@ class TestMemoryCounts(unittest.TestCase):
         Set up a fresh Memory instance before each test.
         """
         self.memory = Memory(verbose_repr=True)
-        self.humemai = Namespace("https://humem.ai/ontology/")
+        self.humemai = Namespace("https://humem.ai/ontology#")
 
         # Define sample triples
         self.triple1 = (
@@ -1663,7 +1663,7 @@ class TestModifyEpisodicEvent(unittest.TestCase):
         Set up the Memory object with some episodic, semantic, and short-term memories.
         """
         self.memory = Memory(verbose_repr=True)
-        self.humemai = Namespace("https://humem.ai/ontology/")
+        self.humemai = Namespace("https://humem.ai/ontology#")
 
         # Define some triples
         self.triple1 = (
@@ -1851,7 +1851,7 @@ class TestIncrementRecalled(unittest.TestCase):
         Set up a fresh Memory instance with episodic and semantic memories.
         """
         self.memory = Memory(verbose_repr=True)
-        self.humemai = Namespace("https://humem.ai/ontology/")
+        self.humemai = Namespace("https://humem.ai/ontology#")
 
         # Define some triples
         self.triple1 = (
@@ -1967,39 +1967,39 @@ class TestMemoryDelete(unittest.TestCase):
 
         # Define episodic and semantic qualifiers with URIRef keys
         self.episodic_qualifiers_1 = {
-            URIRef("https://humem.ai/ontology/location"): Literal("New York"),
-            URIRef("https://humem.ai/ontology/eventTime"): Literal(
+            URIRef("https://humem.ai/ontology#location"): Literal("New York"),
+            URIRef("https://humem.ai/ontology#eventTime"): Literal(
                 "2024-04-27T15:00:00", datatype=XSD.dateTime
             ),
-            URIRef("https://humem.ai/ontology/emotion"): Literal("happy"),
-            URIRef("https://humem.ai/ontology/event"): Literal("Coffee meeting"),
+            URIRef("https://humem.ai/ontology#emotion"): Literal("happy"),
+            URIRef("https://humem.ai/ontology#event"): Literal("Coffee meeting"),
         }
         self.episodic_qualifiers_2 = {
-            URIRef("https://humem.ai/ontology/location"): Literal("London"),
-            URIRef("https://humem.ai/ontology/eventTime"): Literal(
+            URIRef("https://humem.ai/ontology#location"): Literal("London"),
+            URIRef("https://humem.ai/ontology#eventTime"): Literal(
                 "2024-05-01T10:00:00", datatype=XSD.dateTime
             ),
-            URIRef("https://humem.ai/ontology/emotion"): Literal("excited"),
-            URIRef("https://humem.ai/ontology/event"): Literal("Conference meeting"),
+            URIRef("https://humem.ai/ontology#emotion"): Literal("excited"),
+            URIRef("https://humem.ai/ontology#event"): Literal("Conference meeting"),
         }
         self.episodic_qualifiers_3 = {
-            URIRef("https://humem.ai/ontology/location"): Literal("Paris"),
-            URIRef("https://humem.ai/ontology/eventTime"): Literal(
+            URIRef("https://humem.ai/ontology#location"): Literal("Paris"),
+            URIRef("https://humem.ai/ontology#eventTime"): Literal(
                 "2024-05-05T18:00:00", datatype=XSD.dateTime
             ),
-            URIRef("https://humem.ai/ontology/emotion"): Literal("curious"),
-            URIRef("https://humem.ai/ontology/event"): Literal("Workshop"),
+            URIRef("https://humem.ai/ontology#emotion"): Literal("curious"),
+            URIRef("https://humem.ai/ontology#event"): Literal("Workshop"),
         }
 
         self.semantic_qualifiers_1 = {
-            URIRef("https://humem.ai/ontology/derivedFrom"): Literal("animal_research"),
-            URIRef("https://humem.ai/ontology/strength"): Literal(
+            URIRef("https://humem.ai/ontology#derivedFrom"): Literal("animal_research"),
+            URIRef("https://humem.ai/ontology#strength"): Literal(
                 5, datatype=XSD.integer
             ),
         }
         self.semantic_qualifiers_2 = {
-            URIRef("https://humem.ai/ontology/derivedFrom"): Literal("pet_database"),
-            URIRef("https://humem.ai/ontology/strength"): Literal(
+            URIRef("https://humem.ai/ontology#derivedFrom"): Literal("pet_database"),
+            URIRef("https://humem.ai/ontology#strength"): Literal(
                 10, datatype=XSD.integer
             ),
         }
@@ -2029,7 +2029,7 @@ class TestMemoryDelete(unittest.TestCase):
         # Add a short-term memory
         self.memory.add_short_term_memory(
             [self.triples[4]],
-            {URIRef("https://humem.ai/ontology/location"): Literal("Alice's home")},
+            {URIRef("https://humem.ai/ontology#location"): Literal("Alice's home")},
         )  # Memory ID 6
 
     def test_memory_retrieval_by_id(self):
@@ -2037,25 +2037,25 @@ class TestMemoryDelete(unittest.TestCase):
         memory_0 = self.memory.get_memory_by_id(Literal(0, datatype=XSD.integer))
         self.assertIn(
             "New York",
-            memory_0["qualifiers"][URIRef("https://humem.ai/ontology/location")],
+            memory_0["qualifiers"][URIRef("https://humem.ai/ontology#location")],
         )  # Check in the qualifiers
 
         memory_1 = self.memory.get_memory_by_id(Literal(1, datatype=XSD.integer))
         self.assertIn(
             "London",
-            memory_1["qualifiers"][URIRef("https://humem.ai/ontology/location")],
+            memory_1["qualifiers"][URIRef("https://humem.ai/ontology#location")],
         )  # Check in the qualifiers
 
         memory_4 = self.memory.get_memory_by_id(Literal(4, datatype=XSD.integer))
         self.assertIn(
             "animal_research",
-            memory_4["qualifiers"][URIRef("https://humem.ai/ontology/derivedFrom")],
+            memory_4["qualifiers"][URIRef("https://humem.ai/ontology#derivedFrom")],
         )  # Check semantic memory
 
         memory_6 = self.memory.get_memory_by_id(Literal(6, datatype=XSD.integer))
         self.assertIn(
             "Alice's home",
-            memory_6["qualifiers"][URIRef("https://humem.ai/ontology/location")],
+            memory_6["qualifiers"][URIRef("https://humem.ai/ontology#location")],
         )  # Check short-term memory
 
     def test_memory_deletion_by_id(self):
@@ -2123,21 +2123,21 @@ class TestMemoryRetrievalAndDeletion(unittest.TestCase):
 
         # Define qualifiers with URIRef keys
         self.episodic_qualifiers_1 = {
-            URIRef("https://humem.ai/ontology/location"): Literal("New York"),
-            URIRef("https://humem.ai/ontology/eventTime"): Literal(
+            URIRef("https://humem.ai/ontology#location"): Literal("New York"),
+            URIRef("https://humem.ai/ontology#eventTime"): Literal(
                 "2024-04-27T15:00:00", datatype=XSD.dateTime
             ),
-            URIRef("https://humem.ai/ontology/emotion"): Literal("happy"),
-            URIRef("https://humem.ai/ontology/event"): Literal("Coffee meeting"),
+            URIRef("https://humem.ai/ontology#emotion"): Literal("happy"),
+            URIRef("https://humem.ai/ontology#event"): Literal("Coffee meeting"),
         }
 
         self.episodic_qualifiers_2 = {
-            URIRef("https://humem.ai/ontology/location"): Literal("London"),
-            URIRef("https://humem.ai/ontology/eventTime"): Literal(
+            URIRef("https://humem.ai/ontology#location"): Literal("London"),
+            URIRef("https://humem.ai/ontology#eventTime"): Literal(
                 "2024-05-01T10:00:00", datatype=XSD.dateTime
             ),
-            URIRef("https://humem.ai/ontology/emotion"): Literal("excited"),
-            URIRef("https://humem.ai/ontology/event"): Literal("Conference meeting"),
+            URIRef("https://humem.ai/ontology#emotion"): Literal("excited"),
+            URIRef("https://humem.ai/ontology#event"): Literal("Conference meeting"),
         }
 
         # Add long-term episodic memories using add_memory
@@ -2152,7 +2152,7 @@ class TestMemoryRetrievalAndDeletion(unittest.TestCase):
         """Test retrieval of memories by qualifiers and ensure correct memory IDs are returned."""
         # Retrieve memories with the filter location="New York"
         location_qualifier = {
-            URIRef("https://humem.ai/ontology/location"): Literal("New York")
+            URIRef("https://humem.ai/ontology#location"): Literal("New York")
         }
         retrieved_memories = self.memory.get_memories(qualifiers=location_qualifier)
 
@@ -2170,7 +2170,7 @@ class TestMemoryRetrievalAndDeletion(unittest.TestCase):
         """Test deleting a memory by retrieving its ID and verifying it is deleted."""
         # Retrieve memories with location="New York"
         location_qualifier = {
-            URIRef("https://humem.ai/ontology/location"): Literal("New York")
+            URIRef("https://humem.ai/ontology#location"): Literal("New York")
         }
         retrieved_memories = self.memory.get_memories(qualifiers=location_qualifier)
 
@@ -2198,7 +2198,7 @@ class TestMemoryRetrievalAndDeletion(unittest.TestCase):
         """Test that deleting one memory does not affect other memories."""
         # Retrieve and delete memories with location="New York"
         location_qualifier = {
-            URIRef("https://humem.ai/ontology/location"): Literal("New York")
+            URIRef("https://humem.ai/ontology#location"): Literal("New York")
         }
         retrieved_memories = self.memory.get_memories(qualifiers=location_qualifier)
         memory_ids_to_delete = [
@@ -2261,7 +2261,7 @@ class TestRefiedMemory(unittest.TestCase):
         self.memory.graph.triples.return_value = [
             (
                 self.reified_statement,
-                URIRef("https://humem.ai/ontology/recalled"),
+                URIRef("https://humem.ai/ontology#recalled"),
                 Literal(1, datatype=XSD.integer),
             )
         ]
@@ -2271,7 +2271,7 @@ class TestRefiedMemory(unittest.TestCase):
             if statement == self.reified_statement:
                 return [
                     (
-                        URIRef("https://humem.ai/ontology/recalled"),
+                        URIRef("https://humem.ai/ontology#recalled"),
                         Literal(2, datatype=XSD.integer),
                     )
                 ]
@@ -2288,7 +2288,7 @@ class TestRefiedMemory(unittest.TestCase):
         self.memory.graph.set.assert_called_with(
             (
                 self.reified_statement,
-                URIRef("https://humem.ai/ontology/recalled"),
+                URIRef("https://humem.ai/ontology#recalled"),
                 Literal(2, datatype=XSD.integer),
             )
         )
@@ -2297,7 +2297,7 @@ class TestRefiedMemory(unittest.TestCase):
         self.working_memory.graph.add.assert_any_call(
             (
                 self.reified_statement,
-                URIRef("https://humem.ai/ontology/recalled"),
+                URIRef("https://humem.ai/ontology#recalled"),
                 Literal(2, datatype=XSD.integer),
             )
         )
@@ -2319,7 +2319,7 @@ class TestRefiedMemory(unittest.TestCase):
             if statement == self.reified_statement:
                 return [
                     (
-                        URIRef("https://humem.ai/ontology/recalled"),
+                        URIRef("https://humem.ai/ontology#recalled"),
                         Literal(1, datatype=XSD.integer),
                     )
                 ]
@@ -2336,7 +2336,7 @@ class TestRefiedMemory(unittest.TestCase):
         self.memory.graph.set.assert_called_with(
             (
                 self.reified_statement,
-                URIRef("https://humem.ai/ontology/recalled"),
+                URIRef("https://humem.ai/ontology#recalled"),
                 Literal(1, datatype=XSD.integer),
             )
         )
@@ -2345,7 +2345,7 @@ class TestRefiedMemory(unittest.TestCase):
         self.working_memory.graph.add.assert_any_call(
             (
                 self.reified_statement,
-                URIRef("https://humem.ai/ontology/recalled"),
+                URIRef("https://humem.ai/ontology#recalled"),
                 Literal(1, datatype=XSD.integer),
             )
         )
@@ -2380,7 +2380,7 @@ class TestRefiedMemory(unittest.TestCase):
             if statement == specific_statement:
                 return [
                     (
-                        URIRef("https://humem.ai/ontology/recalled"),
+                        URIRef("https://humem.ai/ontology#recalled"),
                         Literal(1, datatype=XSD.integer),
                     )
                 ]
@@ -2401,7 +2401,7 @@ class TestRefiedMemory(unittest.TestCase):
         self.memory.graph.set.assert_called_once_with(
             (
                 specific_statement,
-                URIRef("https://humem.ai/ontology/recalled"),
+                URIRef("https://humem.ai/ontology#recalled"),
                 Literal(1, datatype=XSD.integer),
             )
         )
@@ -2410,7 +2410,7 @@ class TestRefiedMemory(unittest.TestCase):
         self.working_memory.graph.add.assert_called_once_with(
             (
                 specific_statement,
-                URIRef("https://humem.ai/ontology/recalled"),
+                URIRef("https://humem.ai/ontology#recalled"),
                 Literal(1, datatype=XSD.integer),
             )
         )
@@ -2459,14 +2459,14 @@ class TestRefiedMemory(unittest.TestCase):
             [
                 (
                     self.reified_statement,
-                    URIRef("https://humem.ai/ontology/recalled"),
+                    URIRef("https://humem.ai/ontology#recalled"),
                     Literal(1, datatype=XSD.integer),
                 )
             ],
             [
                 (
                     reified_statement_2,
-                    URIRef("https://humem.ai/ontology/recalled"),
+                    URIRef("https://humem.ai/ontology#recalled"),
                     Literal(1, datatype=XSD.integer),
                 )
             ],
@@ -2477,7 +2477,7 @@ class TestRefiedMemory(unittest.TestCase):
             if statement in [self.reified_statement, reified_statement_2]:
                 return [
                     (
-                        URIRef("https://humem.ai/ontology/recalled"),
+                        URIRef("https://humem.ai/ontology#recalled"),
                         Literal(2, datatype=XSD.integer),
                     )
                 ]
@@ -2495,14 +2495,14 @@ class TestRefiedMemory(unittest.TestCase):
             unittest.mock.call(
                 (
                     self.reified_statement,
-                    URIRef("https://humem.ai/ontology/recalled"),
+                    URIRef("https://humem.ai/ontology#recalled"),
                     Literal(2, datatype=XSD.integer),
                 )
             ),
             unittest.mock.call(
                 (
                     reified_statement_2,
-                    URIRef("https://humem.ai/ontology/recalled"),
+                    URIRef("https://humem.ai/ontology#recalled"),
                     Literal(2, datatype=XSD.integer),
                 )
             ),
@@ -2514,14 +2514,14 @@ class TestRefiedMemory(unittest.TestCase):
             unittest.mock.call(
                 (
                     self.reified_statement,
-                    URIRef("https://humem.ai/ontology/recalled"),
+                    URIRef("https://humem.ai/ontology#recalled"),
                     Literal(2, datatype=XSD.integer),
                 )
             ),
             unittest.mock.call(
                 (
                     reified_statement_2,
-                    URIRef("https://humem.ai/ontology/recalled"),
+                    URIRef("https://humem.ai/ontology#recalled"),
                     Literal(2, datatype=XSD.integer),
                 )
             ),
@@ -2543,13 +2543,13 @@ class TestRefiedMemory(unittest.TestCase):
         def triples_side_effect(query):
             if query == (
                 self.reified_statement,
-                URIRef("https://humem.ai/ontology/recalled"),
+                URIRef("https://humem.ai/ontology#recalled"),
                 None,
             ):
                 return [
                     (
                         self.reified_statement,
-                        URIRef("https://humem.ai/ontology/recalled"),
+                        URIRef("https://humem.ai/ontology#recalled"),
                         Literal(1, datatype=XSD.integer),
                     )
                 ]
@@ -2563,23 +2563,23 @@ class TestRefiedMemory(unittest.TestCase):
             if statement == self.reified_statement:
                 return [
                     (
-                        URIRef("https://humem.ai/ontology/recalled"),
+                        URIRef("https://humem.ai/ontology#recalled"),
                         Literal(2, datatype=XSD.integer),
                     ),
                     (
-                        URIRef("https://humem.ai/ontology/location"),
+                        URIRef("https://humem.ai/ontology#location"),
                         Literal("New York", datatype=XSD.string),
                     ),
                     (
-                        URIRef("https://humem.ai/ontology/time"),
+                        URIRef("https://humem.ai/ontology#time"),
                         Literal("2024-04-27T15:00:00", datatype=XSD.dateTime),
                     ),
                     (
-                        URIRef("https://humem.ai/ontology/emotion"),
+                        URIRef("https://humem.ai/ontology#emotion"),
                         Literal("happy", datatype=XSD.string),
                     ),
                     (
-                        URIRef("https://humem.ai/ontology/event"),
+                        URIRef("https://humem.ai/ontology#event"),
                         Literal("Coffee meeting", datatype=XSD.string),
                     ),
                 ]
@@ -2597,7 +2597,7 @@ class TestRefiedMemory(unittest.TestCase):
         self.memory.graph.set.assert_called_with(
             (
                 self.reified_statement,
-                URIRef("https://humem.ai/ontology/recalled"),
+                URIRef("https://humem.ai/ontology#recalled"),
                 Literal(2, datatype=XSD.integer),
             )
         )
@@ -2607,35 +2607,35 @@ class TestRefiedMemory(unittest.TestCase):
             unittest.mock.call(
                 (
                     self.reified_statement,
-                    URIRef("https://humem.ai/ontology/recalled"),
+                    URIRef("https://humem.ai/ontology#recalled"),
                     Literal(2, datatype=XSD.integer),
                 )
             ),
             unittest.mock.call(
                 (
                     self.reified_statement,
-                    URIRef("https://humem.ai/ontology/location"),
+                    URIRef("https://humem.ai/ontology#location"),
                     Literal("New York", datatype=XSD.string),
                 )
             ),
             unittest.mock.call(
                 (
                     self.reified_statement,
-                    URIRef("https://humem.ai/ontology/time"),
+                    URIRef("https://humem.ai/ontology#time"),
                     Literal("2024-04-27T15:00:00", datatype=XSD.dateTime),
                 )
             ),
             unittest.mock.call(
                 (
                     self.reified_statement,
-                    URIRef("https://humem.ai/ontology/emotion"),
+                    URIRef("https://humem.ai/ontology#emotion"),
                     Literal("happy", datatype=XSD.string),
                 )
             ),
             unittest.mock.call(
                 (
                     self.reified_statement,
-                    URIRef("https://humem.ai/ontology/event"),
+                    URIRef("https://humem.ai/ontology#event"),
                     Literal("Coffee meeting", datatype=XSD.string),
                 )
             ),
@@ -2671,14 +2671,14 @@ class TestRefiedMemory(unittest.TestCase):
             [
                 (
                     self.reified_statement,
-                    URIRef("https://humem.ai/ontology/recalled"),
+                    URIRef("https://humem.ai/ontology#recalled"),
                     Literal(1, datatype=XSD.integer),
                 )
             ],
             [
                 (
                     reified_statement_2,
-                    URIRef("https://humem.ai/ontology/recalled"),
+                    URIRef("https://humem.ai/ontology#recalled"),
                     Literal(1, datatype=XSD.integer),
                 )
             ],
@@ -2689,7 +2689,7 @@ class TestRefiedMemory(unittest.TestCase):
             if statement in [self.reified_statement, reified_statement_2]:
                 return [
                     (
-                        URIRef("https://humem.ai/ontology/recalled"),
+                        URIRef("https://humem.ai/ontology#recalled"),
                         Literal(2, datatype=XSD.integer),
                     )
                 ]
@@ -2707,14 +2707,14 @@ class TestRefiedMemory(unittest.TestCase):
             unittest.mock.call(
                 (
                     self.reified_statement,
-                    URIRef("https://humem.ai/ontology/recalled"),
+                    URIRef("https://humem.ai/ontology#recalled"),
                     Literal(2, datatype=XSD.integer),
                 )
             ),
             unittest.mock.call(
                 (
                     reified_statement_2,
-                    URIRef("https://humem.ai/ontology/recalled"),
+                    URIRef("https://humem.ai/ontology#recalled"),
                     Literal(2, datatype=XSD.integer),
                 )
             ),
@@ -2726,14 +2726,14 @@ class TestRefiedMemory(unittest.TestCase):
             unittest.mock.call(
                 (
                     self.reified_statement,
-                    URIRef("https://humem.ai/ontology/recalled"),
+                    URIRef("https://humem.ai/ontology#recalled"),
                     Literal(2, datatype=XSD.integer),
                 )
             ),
             unittest.mock.call(
                 (
                     reified_statement_2,
-                    URIRef("https://humem.ai/ontology/recalled"),
+                    URIRef("https://humem.ai/ontology#recalled"),
                     Literal(2, datatype=XSD.integer),
                 )
             ),
@@ -2756,9 +2756,9 @@ class TestGetShortTerm(unittest.TestCase):
         self.obj = URIRef("https://example.org/person/Bob")
 
         # Qualifiers for the short-term memory
-        self.currentTime_qualifier = URIRef("https://humem.ai/ontology/currentTime")
-        self.location_qualifier = URIRef("https://humem.ai/ontology/location")
-        self.emotion_qualifier = URIRef("https://humem.ai/ontology/emotion")
+        self.currentTime_qualifier = URIRef("https://humem.ai/ontology#currentTime")
+        self.location_qualifier = URIRef("https://humem.ai/ontology#location")
+        self.emotion_qualifier = URIRef("https://humem.ai/ontology#emotion")
 
         self.currentTime_literal = Literal("2024-10-03T15:00:00", datatype=XSD.dateTime)
         self.location_literal = Literal("New York", datatype=XSD.string)
@@ -2909,7 +2909,7 @@ class TestMemorySaveLoad(unittest.TestCase):
         self.test_file = "test_memory.ttl"
 
         # Define the humemai and example namespaces
-        humemai = Namespace("https://humem.ai/ontology/")
+        humemai = Namespace("https://humem.ai/ontology#")
         ex = Namespace("https://example.org/")
 
         # Add multiple short-term memories
@@ -3053,7 +3053,7 @@ class TestMemoryRetrievalMethods(unittest.TestCase):
         for testing.
         """
         self.memory = Memory()
-        self.humemai = Namespace("https://humem.ai/ontology/")
+        self.humemai = Namespace("https://humem.ai/ontology#")
         self.ex = Namespace("https://example.org/")
 
         # Add short-term memory
@@ -3364,15 +3364,15 @@ class TestEvent(unittest.TestCase):
             )
         ]
         event_time = "2023-10-01T10:00:00"
-        event = URIRef("https://humem.ai/ontology/Event/AI_Conference")  # Event URI
+        event = URIRef("https://humem.ai/ontology#event/AI_Conference")  # Event URI
         qualifiers = {
             humemai.location: Literal("Paris"),
             humemai.emotion: Literal("excited"),
             humemai.event: event,
         }
         event_properties = {
-            URIRef("https://humem.ai/ontology/location"): Literal("Paris"),
-            URIRef("https://humem.ai/ontology/duration"): Literal("3 hours"),
+            URIRef("https://humem.ai/ontology#location"): Literal("Paris"),
+            URIRef("https://humem.ai/ontology#duration"): Literal("3 hours"),
         }
 
         # Call add_episodic_memory method with humemai.event as key
@@ -3449,14 +3449,14 @@ class TestEvent(unittest.TestCase):
                 f"Event property '{prop}' should be '{value}'",
             )
 
-    def test_create_event_node(self):
+    def test_add_event(self):
         """
         Test creating an event node in the graph.
         """
-        event = URIRef("https://humem.ai/ontology/Event/AI_Conference")
+        event = URIRef("https://humem.ai/ontology#event/AI_Conference")
 
-        # Call create_event_node
-        self.memory.create_event_node(event)
+        # Call add_event
+        self.memory.add_event(event)
 
         # Verify the event node exists
         self.assertTrue(
@@ -3468,14 +3468,14 @@ class TestEvent(unittest.TestCase):
         """
         Test adding custom properties to an event node.
         """
-        event = URIRef("https://humem.ai/ontology/Event/AI_Conference")
+        event = URIRef("https://humem.ai/ontology#event/AI_Conference")
         event_properties = {
-            URIRef("https://humem.ai/ontology/location"): Literal("Paris"),
-            URIRef("https://humem.ai/ontology/duration"): Literal("3 hours"),
+            URIRef("https://humem.ai/ontology#location"): Literal("Paris"),
+            URIRef("https://humem.ai/ontology#duration"): Literal("3 hours"),
         }
 
         # Create the event node first
-        self.memory.create_event_node(event)
+        self.memory.add_event(event)
 
         # Add event properties
         self.memory.add_event_properties(event, event_properties)
@@ -3500,9 +3500,9 @@ class TestEventCount(unittest.TestCase):
         Test the get_event_count method by adding event nodes and verifying the count.
         """
         # Add some event nodes to the graph
-        event_1 = URIRef("https://humem.ai/ontology/Event/AI_Conference")
-        event_2 = URIRef("https://humem.ai/ontology/Event/Workshop_2023")
-        event_3 = URIRef("https://humem.ai/ontology/Event/Hackathon")
+        event_1 = URIRef("https://humem.ai/ontology#event/AI_Conference")
+        event_2 = URIRef("https://humem.ai/ontology#event/Workshop_2023")
+        event_3 = URIRef("https://humem.ai/ontology#event/Hackathon")
 
         # Add the events as instances of humemai:Event
         self.memory.graph.add((event_1, RDF.type, humemai.Event))
@@ -3528,7 +3528,7 @@ class TestEventCount(unittest.TestCase):
         Test the get_event_count method when there is only one event.
         """
         # Add one event node to the graph
-        event = URIRef("https://humem.ai/ontology/Event/Seminar")
+        event = URIRef("https://humem.ai/ontology#event/Seminar")
         self.memory.graph.add((event, RDF.type, humemai.Event))
 
         # Check the count of events
@@ -3548,9 +3548,9 @@ class TestEventMethods(unittest.TestCase):
         Test the iterate_events method by adding event nodes and verifying the iteration.
         """
         # Add some event nodes to the graph
-        event_1 = URIRef("https://humem.ai/ontology/Event/AI_Conference")
-        event_2 = URIRef("https://humem.ai/ontology/Event/Workshop_2023")
-        event_3 = URIRef("https://humem.ai/ontology/Event/Hackathon")
+        event_1 = URIRef("https://humem.ai/ontology#event/AI_Conference")
+        event_2 = URIRef("https://humem.ai/ontology#event/Workshop_2023")
+        event_3 = URIRef("https://humem.ai/ontology#event/Hackathon")
 
         # Add the events as instances of humemai:Event
         self.memory.graph.add((event_1, RDF.type, humemai.Event))
@@ -3577,10 +3577,60 @@ class TestEventMethods(unittest.TestCase):
         Test the iterate_events method when there is only one event.
         """
         # Add one event node to the graph
-        event = URIRef("https://humem.ai/ontology/Event/Seminar")
+        event = URIRef("https://humem.ai/ontology#event/Seminar")
         self.memory.graph.add((event, RDF.type, humemai.Event))
 
         # Collect the events from iterate_events
         events = list(self.memory.iterate_events())
         self.assertEqual(len(events), 1, "There should be 1 event")
         self.assertIn(event, events, "Seminar event should be in the list")
+
+class TestMemoryEvents(unittest.TestCase):
+
+    def setUp(self):
+        """Set up the memory system before each test."""
+        self.memory = Memory(verbose_repr=False)
+
+        # Example URIs and Literals for subjects, predicates, and objects
+        self.alice = URIRef("https://example.org/Alice")
+        self.bob = URIRef("https://example.org/Bob")
+        self.attended = URIRef("https://example.org/attended")
+        self.location = URIRef("https://example.org/location")
+        self.date = URIRef("https://example.org/date")
+        self.event = URIRef("https://example.org/AI_Conference")
+        self.paris = Literal("Paris")
+        self.date_literal = Literal("2023-05-05", datatype=XSD.date)
+
+    def convert_to_str(self, triples):
+        """Helper method to convert RDFLib objects to string form."""
+        return {(str(subj), str(pred), str(obj)) for subj, pred, obj in triples}
+
+    def test_get_events_with_events(self):
+        """Test get_events returns the correct event-related triples."""
+
+        # Add some event-related triples using add_event
+        self.memory.add_event(self.event)
+        self.memory.add_event_properties(self.event, {
+            self.location: self.paris,
+            self.date: self.date_literal
+        })
+
+        self.memory.add_memory([(self.alice, self.attended, self.event)])  # Alice attended the AI conference
+
+        # Now call get_events and check the result
+        event_triples = self.memory.get_events()
+
+        expected_triples = {
+            (self.alice, self.attended, self.event),
+            (self.event, self.location, self.paris),
+            (self.event, self.date, self.date_literal)
+        }
+
+        # Filter out reification-related triples (like rdf:type, rdf:subject, rdf:predicate, rdf:object)
+        filtered_event_triples = [
+            triple for triple in event_triples
+            if triple[1] not in (RDF.type, RDF.subject, RDF.predicate, RDF.object)
+        ]
+
+        # Convert both to string representations and compare
+        self.assertEqual(self.convert_to_str(filtered_event_triples), self.convert_to_str(expected_triples))
