@@ -3,8 +3,8 @@
 import collections
 import logging
 
-from rdflib import Namespace, URIRef
-from rdflib.namespace import RDF
+from rdflib import Namespace, URIRef, Literal
+from rdflib.namespace import RDF, XSD
 
 from .memory import Memory
 
@@ -22,9 +22,8 @@ class MemorySystem:
     Provides methods to interact with the overall memory system.
     """
 
-    def __init__(self, verbose_repr: bool = False):
-        self.verbose_repr = verbose_repr
-        self.memory = Memory(self.verbose_repr)
+    def __init__(self):
+        self.memory = Memory()
 
     def is_reified_statement_short_term(self, statement) -> bool:
         """
@@ -65,7 +64,7 @@ class MemorySystem:
             Memory: A new Memory object containing the working memory (short-term +
             relevant long-term memories).
         """
-        working_memory = Memory(self.verbose_repr)
+        working_memory = Memory()
         processed_statements = set()  # Keep track of processed reified statements
 
         logger.info(
@@ -203,23 +202,28 @@ class MemorySystem:
 
         return working_memory
 
-    def move_short_term_to_episodic(self, memory_id_to_move):
+    def move_short_term_to_episodic(
+        self, memory_id_to_move: Literal, qualifiers: dict = {}
+    ):
         """
         Move the specified short-term memory to long-term episodic memory.
 
         Args:
-            memory_id_to_move (int): The memory ID to move from short-term to long-term.
+            memory_id_to_move (Literal): The memory ID to move from short-term to long-term.
         """
+        if memory_id_to_move.datatype != XSD.integer:
+            raise ValueError("Memory ID must be an integer.")
+
         # Iterate through the short-term memories
-        for subj, pred, obj, qualifiers in self.memory.iterate_memories("short_term"):
-            memory_id = qualifiers.get(humemai.memoryID)
+        for subj, pred, obj, qualifiers_ in self.memory.iterate_memories("short_term"):
+            memory_id = qualifiers_.get(humemai.memoryID)
 
             # Check if the memory ID matches
-            if memory_id and int(memory_id) == memory_id_to_move:
-                location = qualifiers.get(humemai.location)
-                currentTime = qualifiers.get(humemai.currentTime)
+            if memory_id == memory_id_to_move:
+                location = qualifiers_.get(humemai.location)
+                currentTime = qualifiers_.get(humemai.currentTime)
 
-                qualifiers = {humemai.currentTime: currentTime}
+                qualifiers[humemai.eventTime] = currentTime
 
                 if location:
                     qualifiers[humemai.location] = location
@@ -230,28 +234,34 @@ class MemorySystem:
                 )
 
                 # Remove the short-term memory after moving it to long-term
-                self.memory.delete_memory(int(memory_id))
+                self.memory.delete_memory(memory_id)
 
                 logger.debug(
                     f"Moved short-term memory with ID {memory_id_to_move} to episodic long-term memory."
                 )
                 break
 
-    def move_short_term_to_semantic(self, memory_id_to_move):
+    def move_short_term_to_semantic(
+        self, memory_id_to_move: Literal, qualifiers: dict = {}
+    ):
         """
         Move the specified short-term memory to long-term semantic memory.
 
         Args:
-            memory_id_to_move (int): The memory ID to move from short-term to long-term.
+            memory_id_to_move (Literal): The memory ID to move from short-term to long-term.
         """
+        if memory_id_to_move.datatype != XSD.integer:
+            raise ValueError("Memory ID must be an integer.")
+
         # Iterate through the short-term memories
-        for subj, pred, obj, qualifiers in self.memory.iterate_memories("short_term"):
-            memory_id = qualifiers.get(humemai.memoryID)
+        for subj, pred, obj, qualifiers_ in self.memory.iterate_memories("short_term"):
+            memory_id = qualifiers_.get(humemai.memoryID)
 
             # Check if the memory ID matches
-            if memory_id and int(memory_id) == memory_id_to_move:
-                currentTime = qualifiers.get(humemai.currentTime)
-                qualifiers = {humemai.knownSince: currentTime}
+            if memory_id == memory_id_to_move:
+                currentTime = qualifiers_.get(humemai.currentTime)
+
+                qualifiers[humemai.knownSince] = currentTime
 
                 # Move to long-term semantic memory
                 self.memory.add_semantic_memory(
@@ -259,7 +269,7 @@ class MemorySystem:
                 )
 
                 # Remove the short-term memory after moving it to long-term
-                self.memory.delete_memory(int(memory_id))
+                self.memory.delete_memory(memory_id)
                 logger.debug(
                     f"Moved short-term memory with ID {memory_id_to_move} to semantic long-term memory."
                 )
@@ -272,15 +282,5 @@ class MemorySystem:
         for subj, pred, obj, qualifiers in self.memory.iterate_memories("short_term"):
             memory_id = qualifiers.get(humemai.memoryID)
 
-            if memory_id:
-                self.memory.delete_memory(memory_id)
-                logger.debug(f"Cleared short-term memory with ID {memory_id}.")
-
-    def __repr__(self) -> str:
-        """
-        String representation of the MemorySystem, showing all memories.
-
-        Returns:
-            str: String representation of all memories.
-        """
-        return repr(self.memory)
+            self.memory.delete_memory(memory_id)
+            logger.debug(f"Cleared short-term memory with ID {memory_id}.")

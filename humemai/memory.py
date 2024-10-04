@@ -22,11 +22,10 @@ class Memory:
     Provides methods to add, retrieve, delete, cluster, and manage memories in the RDF graph.
     """
 
-    def __init__(self, verbose_repr: bool = False):
+    def __init__(self):
         # Initialize RDF graph for memory storage
         self.graph = Graph()
         self.graph.bind("humemai", humemai)
-        self.verbose_repr = verbose_repr
         self.current_statement_id = 0  # Counter to track the next unique ID
 
     def add_memory(self, triples: list, qualifiers: dict = {}):
@@ -440,7 +439,7 @@ class Memory:
                     ] = qualifier_obj
 
         # Create a new Memory object to store the filtered results
-        filtered_memory = Memory(self.verbose_repr)
+        filtered_memory = Memory()
 
         # Populate the Memory object with the main triples and their qualifiers
         for statement, data in statement_dict.items():
@@ -465,7 +464,16 @@ class Memory:
 
         return filtered_memory
 
-    def get_triple_count_except_event(self) -> int:
+    def get_raw_triple_count(self) -> int:
+        """
+        Count the number of raw triples in the RDF graph.
+
+        Returns:
+            int: The count of raw triples.
+        """
+        return len(self.graph)
+
+    def get_main_triple_count_except_event(self) -> int:
         """
         Count the number of unique memories (subject-predicate-object triples) in the
         graph. This does not count reified statements.
@@ -831,40 +839,6 @@ class Memory:
                 f"Updated recalled for statement {statement} to {new_recalled_value}"
             )
 
-    def __repr__(self) -> str:
-        if self.verbose_repr:
-            memory_strings = []
-            for statement in self.graph.subjects(RDF.type, RDF.Statement):
-                subj = self.graph.value(statement, RDF.subject)
-                pred = self.graph.value(statement, RDF.predicate)
-                obj = self.graph.value(statement, RDF.object)
-                qualifiers = {}
-
-                for q_pred, q_obj in self.graph.predicate_objects(statement):
-                    if q_pred not in (RDF.type, RDF.subject, RDF.predicate, RDF.object):
-                        qualifiers[q_pred] = q_obj
-
-                memory_strings.append(f"[{subj}, {pred}, {obj}, {qualifiers}]")
-
-            return "\n".join(memory_strings)
-        else:
-            memory_strings = []
-            for statement in self.graph.subjects(RDF.type, RDF.Statement):
-                subj = self._strip_namespace(self.graph.value(statement, RDF.subject))
-                pred = self._strip_namespace(self.graph.value(statement, RDF.predicate))
-                obj = self._strip_namespace(self.graph.value(statement, RDF.object))
-                qualifiers = {}
-
-                for q_pred, q_obj in self.graph.predicate_objects(statement):
-                    if q_pred not in (RDF.type, RDF.subject, RDF.predicate, RDF.object):
-                        qualifiers[self._strip_namespace(q_pred)] = (
-                            self._strip_namespace(q_obj)
-                        )
-
-                memory_strings.append(f"[{subj}, {pred}, {obj}, {qualifiers}]")
-
-            return "\n".join(memory_strings)
-
     def _strip_namespace(self, uri):
         """
         Helper function to strip the namespace and return the last part of a URIRef.
@@ -973,7 +947,7 @@ class Memory:
         Returns:
             Memory: A Memory object containing all short-term memories with their qualifiers.
         """
-        short_term_memory = Memory(self.verbose_repr)
+        short_term_memory = Memory()
 
         # SPARQL query to retrieve all reified statements with a currentTime qualifier, along with other qualifiers
         query = """
@@ -1057,7 +1031,7 @@ class Memory:
             Memory: A new Memory object containing all long-term memories (episodic and
             semantic).
         """
-        long_term_memory = Memory(self.verbose_repr)
+        long_term_memory = Memory()
 
         # SPARQL query to retrieve all reified statements that have either eventTime or knownSince,
         # and do not have a currentTime qualifier
@@ -1217,12 +1191,13 @@ class Memory:
         for event_node in self.graph.subjects(RDF.type, humemai.Event):
             yield event_node
 
-    def get_events(self) -> list:
+    def print_events(self, debug=False):
         """
-        Retrieve all triples where an Event entity is involved either as the subject or the object.
+        Retrieve all triples where an Event entity is involved either as the subject or the object
+        and format them as a readable string.
 
         Returns:
-            list: A list of triples where the Event entity is involved.
+            str: A formatted string containing all event-related triples.
         """
         event_triples = []
 
@@ -1234,36 +1209,66 @@ class Memory:
             for s, p, o in self.graph.triples((None, None, event_node)):
                 event_triples.append((s, p, o))
 
-        return event_triples
-
-    def print_events(self):
-        """
-        Print all triples where an Event entity is involved either as the subject or the object
-        in a readable format.
-        """
-        event_triples = self.get_events()
-
         if not event_triples:
-            print("No events found.")
+            if debug:
+                return ""
+            else:
+                print("")
+                return
+
+        event_strings = []
+
+        for subj, pred, obj in event_triples:
+            if pred == humemai.event or pred == RDF.type:
+                continue
+            subj_str = self._strip_namespace(subj)
+            pred_str = self._strip_namespace(pred)
+            obj_str = self._strip_namespace(obj)
+            event_strings.append(f"({subj_str}, {pred_str}, {obj_str})")
+
+        if debug:
+            return "\n".join(event_strings)
+        else:
+            print("\n".join(event_strings))
             return
 
-        print("Event-related triples:")
-        if self.verbose_repr:
-            for subj, pred, obj in event_triples:
-                if pred == humemai.event or pred == RDF.type:
-                    continue
-                print(f"({subj}, {pred}, {obj})")
+    def print_all_raw_triples(self, debug=False):
+        """
+        Print all triples in the graph in a readable format.
+        """
+        raw_triples_string = []
+        for subj, pred, obj in self.graph:
+            raw_triples_string.append(f"({subj}, {pred}, {obj})")
+        
+        if debug:
+            return "\n".join(raw_triples_string)
+        
         else:
-            for subj, pred, obj in event_triples:
-                if pred == humemai.event or pred == RDF.type:
-                    continue
-                subj_str = self._strip_namespace(subj)
-                pred_str = self._strip_namespace(pred)
-                obj_str = self._strip_namespace(obj)
-                print(f"({subj_str}, {pred_str}, {obj_str})")
+            print("\n".join(raw_triples_string))
+            return
 
-    def print_memories(self):
+    def print_memories(self, debug=False):
         """
         Print all memories in the graph in a readable format.
         """
-        print(self)
+
+        memory_strings = []
+        for statement in self.graph.subjects(RDF.type, RDF.Statement):
+            subj = self._strip_namespace(self.graph.value(statement, RDF.subject))
+            pred = self._strip_namespace(self.graph.value(statement, RDF.predicate))
+            obj = self._strip_namespace(self.graph.value(statement, RDF.object))
+            qualifiers = {}
+
+            for q_pred, q_obj in self.graph.predicate_objects(statement):
+                if q_pred not in (RDF.type, RDF.subject, RDF.predicate, RDF.object):
+                    qualifiers[self._strip_namespace(q_pred)] = self._strip_namespace(
+                        q_obj
+                    )
+
+            memory_strings.append(f"({subj}, {pred}, {obj}, {qualifiers})")
+        
+        if debug:
+            return "\n".join(memory_strings)
+        else:
+            print("\n".join(memory_strings))
+            return

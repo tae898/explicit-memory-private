@@ -17,7 +17,7 @@ class Agent:
         """
         Initialize the Agent with its memory system and NLP model.
         """
-        self.memory_system = MemorySystem(verbose_repr=True)
+        self.memory_system = MemorySystem()
         self.nlp = spacy.load("en_core_web_sm")
 
     def process_input(self, sentence: str):
@@ -252,7 +252,7 @@ class Agent:
         Print the current memory system (short-term and long-term memories).
         """
         print("\nMemory System:")
-        print(self.memory_system.memory)
+        self.memory_system.memory.print_memories()
 
     def clear_short_term_memories(self):
         """

@@ -2,6 +2,7 @@ import unittest
 from datetime import datetime
 
 from rdflib import RDF, Literal, Namespace, URIRef
+from rdflib.namespace import XSD
 
 from humemai import MemorySystem
 
@@ -185,7 +186,7 @@ class TestMemorySystem(unittest.TestCase):
             trigger_node=trigger_node, hops=0
         )
 
-        self.assertEqual(working_memory.get_triple_count_except_event(), 2)
+        self.assertEqual(working_memory.get_main_triple_count_except_event(), 2)
         self.assertEqual(working_memory.get_memory_count(), 4)
 
     def test_working_memory_hop_1(self):
@@ -195,7 +196,7 @@ class TestMemorySystem(unittest.TestCase):
             trigger_node=trigger_node, hops=1
         )
 
-        self.assertEqual(working_memory.get_triple_count_except_event(), 5)
+        self.assertEqual(working_memory.get_main_triple_count_except_event(), 5)
         self.assertEqual(working_memory.get_memory_count(), 9)
 
     def test_working_memory_hop_2(self):
@@ -205,7 +206,7 @@ class TestMemorySystem(unittest.TestCase):
             trigger_node=trigger_node, hops=2
         )
 
-        self.assertEqual(working_memory.get_triple_count_except_event(), 10)
+        self.assertEqual(working_memory.get_main_triple_count_except_event(), 10)
         self.assertEqual(working_memory.get_memory_count(), 16)
 
     def test_working_memory_hop_3(self):
@@ -215,14 +216,14 @@ class TestMemorySystem(unittest.TestCase):
             trigger_node=trigger_node, hops=3
         )
 
-        self.assertEqual(working_memory.get_triple_count_except_event(), 11)
+        self.assertEqual(working_memory.get_main_triple_count_except_event(), 11)
         self.assertEqual(working_memory.get_memory_count(), 19)
 
     def test_working_memory_include_all_long_term(self):
         """Test that all long-term memories are included when include_all_long_term=True."""
         working_memory = self.memory.get_working_memory(include_all_long_term=True)
 
-        self.assertEqual(working_memory.get_triple_count_except_event(), 11)
+        self.assertEqual(working_memory.get_main_triple_count_except_event(), 11)
         self.assertEqual(working_memory.get_memory_count(), 19)
 
     def test_recalled_value_increment(self):
@@ -255,7 +256,7 @@ class TestMemorySystem(unittest.TestCase):
             URIRef("https://example.org/person/Alice"), hops=1
         )
 
-        self.assertEqual(working_memory.get_triple_count_except_event(), 0)
+        self.assertEqual(working_memory.get_main_triple_count_except_event(), 0)
         self.assertEqual(working_memory.get_memory_count(), 0)
 
     def test_invalid_trigger_node(self):
@@ -264,170 +265,191 @@ class TestMemorySystem(unittest.TestCase):
             self.memory.get_working_memory(trigger_node=None, hops=1)
 
 
-# class TestMemorySystemMethods(unittest.TestCase):
-#     def setUp(self):
-#         """
-#         Set up a new MemorySystem instance before each test.
-#         """
-#         self.memory_system = MemorySystem(verbose_repr=True)
+class TestMemorySystemMethods(unittest.TestCase):
+    def setUp(self):
+        """
+        Set up a new MemorySystem instance before each test.
+        """
+        self.memory_system = MemorySystem()
 
-#         # Add a short-term memory to the memory system
-#         self.short_term_triplet_1 = (
-#             URIRef("https://example.org/Alice"),
-#             URIRef("https://example.org/meet"),
-#             URIRef("https://example.org/Bob"),
-#         )
-#         self.short_term_triplet_2 = (
-#             URIRef("https://example.org/Bob"),
-#             URIRef("https://example.org/travel"),
-#             URIRef("https://example.org/Paris"),
-#         )
+        # Add a short-term memory to the memory system
+        self.short_term_triplet_1 = (
+            URIRef("https://example.org/Alice"),
+            URIRef("https://example.org/meet"),
+            URIRef("https://example.org/Bob"),
+        )
+        self.short_term_triplet_2 = (
+            URIRef("https://example.org/Bob"),
+            URIRef("https://example.org/travel"),
+            URIRef("https://example.org/Paris"),
+        )
 
-#         # Add these triples to short-term memory
-#         self.memory_system.memory.add_short_term_memory(
-#             [self.short_term_triplet_1],
-#             location="Paris",
-#             currentTime="2023-05-05T00:00:00",
-#         )
-#         self.memory_system.memory.add_short_term_memory(
-#             [self.short_term_triplet_2],
-#             location="Paris",
-#             currentTime="2023-05-06T00:00:00",
-#         )
+        # Add these triples to short-term memory
+        self.memory_system.memory.add_short_term_memory(
+            [self.short_term_triplet_1],
+            qualifiers={
+                humemai.location: Literal("Paris"),
+                humemai.currentTime: Literal(
+                    "2023-05-05T00:00:00", datatype=XSD.dateTime
+                ),
+            },
+        )
+        self.memory_system.memory.add_short_term_memory(
+            [self.short_term_triplet_2],
+            qualifiers={
+                humemai.location: Literal("Paris"),
+                humemai.currentTime: Literal(
+                    "2023-05-06T00:00:00", datatype=XSD.dateTime
+                ),
+            },
+        )
 
-#     def test_move_short_term_to_long_term(self):
-#         """
-#         Test that a specific short-term memory is moved to long-term memory.
-#         """
-#         # Initially, ensure there are short-term memories
-#         short_term_memories = self.memory_system.memory.get_short_term_memories()
-#         self.assertEqual(short_term_memories.get_memory_count(), 2)
+    def test_move_short_term_to_long_term(self):
+        """
+        Test that a specific short-term memory is moved to long-term memory.
+        """
+        # Initially, ensure there are short-term memories
+        short_term_memories = self.memory_system.memory.get_short_term_memories()
+        self.assertEqual(short_term_memories.get_memory_count(), 2)
 
-#         # Move short-term memory with ID 0 to long-term memory
-#         self.memory_system.move_short_term_to_long_term(0)
+        # Move short-term memory with ID 0 to long-term memory
+        self.memory_system.move_short_term_to_episodic(Literal(0))
 
-#         # Check that the short-term memory count is now 1 (after moving one to long-term)
-#         short_term_memories = self.memory_system.memory.get_short_term_memories()
-#         self.assertEqual(short_term_memories.get_memory_count(), 1)
+        # Check that the short-term memory count is now 1 (after moving one to long-term)
+        short_term_memories = self.memory_system.memory.get_short_term_memories()
+        self.assertEqual(short_term_memories.get_memory_count(), 1)
 
-#         # Check that the long-term memory count is now 1 (since one was moved)
-#         long_term_memories = self.memory_system.memory.get_long_term_memories()
-#         self.assertEqual(long_term_memories.get_memory_count(), 1)
+        # Check that the long-term memory count is now 1 (since one was moved)
+        long_term_memories = self.memory_system.memory.get_long_term_memories()
+        self.assertEqual(long_term_memories.get_memory_count(), 1)
 
-#         # Check that the moved long-term memory contains the correct triple
-#         found_memory = False
-#         for subj, pred, obj, qualifiers in long_term_memories.iterate_memories():
-#             if (subj, pred, obj) == self.short_term_triplet_1:
-#                 found_memory = True
-#         self.assertTrue(
-#             found_memory, "Moved short-term memory was not found in long-term memory."
-#         )
+        # Check that the moved long-term memory contains the correct triple
+        found_memory = False
+        for subj, pred, obj, qualifiers in long_term_memories.iterate_memories():
+            if (subj, pred, obj) == self.short_term_triplet_1:
+                found_memory = True
+        self.assertTrue(
+            found_memory, "Moved short-term memory was not found in long-term memory."
+        )
 
-#     def test_clear_short_term_memories(self):
-#         """
-#         Test that all short-term memories are cleared after calling clear_short_term_memories.
-#         """
-#         # Ensure there are initially 2 short-term memories
-#         short_term_memories = self.memory_system.memory.get_short_term_memories()
-#         self.assertEqual(short_term_memories.get_memory_count(), 2)
+    def test_clear_short_term_memories(self):
+        """
+        Test that all short-term memories are cleared after calling clear_short_term_memories.
+        """
+        # Ensure there are initially 2 short-term memories
+        short_term_memories = self.memory_system.memory.get_short_term_memories()
+        self.assertEqual(short_term_memories.get_memory_count(), 2)
 
-#         # Clear all short-term memories
-#         self.memory_system.clear_short_term_memories()
+        # Clear all short-term memories
+        self.memory_system.clear_short_term_memories()
 
-#         # Check that there are no short-term memories remaining
-#         short_term_memories = self.memory_system.memory.get_short_term_memories()
-#         self.assertEqual(short_term_memories.get_memory_count(), 0)
+        # Check that there are no short-term memories remaining
+        short_term_memories = self.memory_system.memory.get_short_term_memories()
+        self.assertEqual(short_term_memories.get_memory_count(), 0)
 
-#         # Ensure long-term memory is unaffected by clearing short-term memories
-#         long_term_memories = self.memory_system.memory.get_long_term_memories()
-#         self.assertEqual(long_term_memories.get_memory_count(), 0)
+        # Ensure long-term memory is unaffected by clearing short-term memories
+        long_term_memories = self.memory_system.memory.get_long_term_memories()
+        self.assertEqual(long_term_memories.get_memory_count(), 0)
 
 
-# class TestMemorySystemMoveShortTermToLongTerm(unittest.TestCase):
+class TestMemorySystemMoveShortTermToLongTerm(unittest.TestCase):
 
-#     def setUp(self):
-#         """
-#         Set up the MemorySystem for testing with some initial short-term memories.
-#         """
-#         self.memory_system = MemorySystem(verbose_repr=True)
+    def setUp(self):
+        """
+        Set up the MemorySystem for testing with some initial short-term memories.
+        """
+        self.memory_system = MemorySystem()
 
-#         # Add a short-term memory to the memory system
-#         self.memory_system.memory.add_short_term_memory(
-#             [
-#                 (
-#                     URIRef("https://example.org/Alice"),
-#                     URIRef("https://example.org/met"),
-#                     URIRef("https://example.org/Bob"),
-#                 )
-#             ],
-#             location="Paris",
-#             currentTime="2023-05-05T00:00:00",
-#         )
+        # Add a short-term memory to the memory system
+        self.memory_system.memory.add_short_term_memory(
+            [
+                (
+                    URIRef("https://example.org/Alice"),
+                    URIRef("https://example.org/met"),
+                    URIRef("https://example.org/Bob"),
+                )
+            ],
+            qualifiers={
+                humemai.location: Literal("Paris"),
+                humemai.currentTime: Literal(
+                    "2023-05-05T00:00:00", datatype=XSD.dateTime
+                ),
+            },
+        )
 
-#         # Add another short-term memory
-#         self.memory_system.memory.add_short_term_memory(
-#             [
-#                 (
-#                     URIRef("https://example.org/Charlie"),
-#                     URIRef("https://example.org/saw"),
-#                     URIRef("https://example.org/Alice"),
-#                 )
-#             ],
-#             location="New York",
-#             currentTime="2024-06-10T00:00:00",
-#         )
+        # Add another short-term memory
+        self.memory_system.memory.add_short_term_memory(
+            [
+                (
+                    URIRef("https://example.org/Charlie"),
+                    URIRef("https://example.org/saw"),
+                    URIRef("https://example.org/Alice"),
+                )
+            ],
+            qualifiers={
+                humemai.location: Literal("London"),
+                humemai.currentTime: Literal(
+                    "2023-05-06T00:00:00", datatype=XSD.dateTime
+                ),
+            },
+        )
 
-#     def test_move_short_term_to_long_term_episodic(self):
-#         """
-#         Test moving a short-term memory to long-term episodic memory with emotion and event qualifiers.
-#         """
-#         # Move short-term memory to long-term episodic memory
-#         self.memory_system.move_short_term_to_long_term(
-#             memory_id_to_move=0,
-#             memory_type="episodic",
-#             emotion="excited",
-#             event="AI Conference",
-#         )
+    def test_move_short_term_to_long_term_episodic(self):
+        """
+        Test moving a short-term memory to long-term episodic memory with emotion and event qualifiers.
+        """
+        # Move short-term memory to long-term episodic memory
+        self.memory_system.move_short_term_to_episodic(
+            memory_id_to_move=Literal(0),
+            qualifiers={
+                humemai.emotion: Literal("excited"),
+                humemai.event: Literal("AI Conference"),
+            },
+        )
 
-#         # Check that the memory was moved to long-term and has correct qualifiers
-#         long_term_memories = self.memory_system.memory.get_long_term_memories()
-#         episodic_memories = list(
-#             self.memory_system.memory.iterate_memories(memory_type="episodic")
-#         )
+        # Check that the memory was moved to long-term and has correct qualifiers
+        long_term_memories = self.memory_system.memory.get_long_term_memories()
+        episodic_memories = list(
+            self.memory_system.memory.iterate_memories(memory_type="episodic")
+        )
 
-#         # Assert that the long-term memory contains the correct triple and qualifiers
-#         self.assertEqual(len(episodic_memories), 1)
-#         subj, pred, obj, qualifiers = episodic_memories[0]
-#         self.assertEqual(subj, URIRef("https://example.org/Alice"))
-#         self.assertEqual(pred, URIRef("https://example.org/met"))
-#         self.assertEqual(obj, URIRef("https://example.org/Bob"))
-#         self.assertEqual(qualifiers.get(str(humemai.location)), "Paris")
-#         self.assertEqual(qualifiers.get(str(humemai.time)), "2023-05-05T00:00:00")
-#         self.assertEqual(qualifiers.get(str(humemai.emotion)), "excited")
-#         self.assertEqual(qualifiers.get(str(humemai.event)), "AI Conference")
+        # Assert that the long-term memory contains the correct triple and qualifiers
+        self.assertEqual(len(episodic_memories), 1)
+        subj, pred, obj, qualifiers = episodic_memories[0]
+        self.assertEqual(subj, URIRef("https://example.org/Alice"))
+        self.assertEqual(pred, URIRef("https://example.org/met"))
+        self.assertEqual(obj, URIRef("https://example.org/Bob"))
+        self.assertEqual(qualifiers.get(humemai.location), Literal("Paris"))
+        self.assertEqual(
+            qualifiers.get(humemai.eventTime),
+            Literal("2023-05-05T00:00:00", datatype=XSD.dateTime),
+        )
+        self.assertEqual(qualifiers.get(humemai.emotion), Literal("excited"))
+        self.assertEqual(qualifiers.get(humemai.event), Literal("AI Conference"))
 
-#     def test_move_short_term_to_long_term_semantic(self):
-#         """
-#         Test moving a short-term memory to long-term semantic memory with strength and derivedFrom qualifiers.
-#         """
-#         # Move short-term memory to long-term semantic memory
-#         self.memory_system.move_short_term_to_long_term(
-#             memory_id_to_move=1,
-#             memory_type="semantic",
-#             strength=5,
-#             derivedFrom="Observation",
-#         )
+    def test_move_short_term_to_long_term_semantic(self):
+        """
+        Test moving a short-term memory to long-term semantic memory with strength and derivedFrom qualifiers.
+        """
+        # Move short-term memory to long-term semantic memory
+        self.memory_system.move_short_term_to_semantic(
+            memory_id_to_move=Literal(1),
+            qualifiers={
+                humemai.strength: Literal(5),
+                humemai.derivedFrom: Literal("Observation"),
+            },
+        )
 
-#         # Check that the memory was moved to long-term and has correct qualifiers
-#         semantic_memories = list(
-#             self.memory_system.memory.iterate_memories(memory_type="semantic")
-#         )
+        # Check that the memory was moved to long-term and has correct qualifiers
+        semantic_memories = list(
+            self.memory_system.memory.iterate_memories(memory_type="semantic")
+        )
 
-#         # Assert that the long-term memory contains the correct triple and qualifiers
-#         self.assertEqual(len(semantic_memories), 1)
-#         subj, pred, obj, qualifiers = semantic_memories[0]
-#         self.assertEqual(subj, URIRef("https://example.org/Charlie"))
-#         self.assertEqual(pred, URIRef("https://example.org/saw"))
-#         self.assertEqual(obj, URIRef("https://example.org/Alice"))
-#         self.assertEqual(qualifiers.get(str(humemai.strength)), "5")
-#         self.assertEqual(qualifiers.get(str(humemai.derivedFrom)), "Observation")
+        # Assert that the long-term memory contains the correct triple and qualifiers
+        self.assertEqual(len(semantic_memories), 1)
+        subj, pred, obj, qualifiers = semantic_memories[0]
+        self.assertEqual(subj, URIRef("https://example.org/Charlie"))
+        self.assertEqual(pred, URIRef("https://example.org/saw"))
+        self.assertEqual(obj, URIRef("https://example.org/Alice"))
+        self.assertEqual(qualifiers.get(humemai.strength), Literal(5))
+        self.assertEqual(qualifiers.get(humemai.derivedFrom), Literal("Observation"))

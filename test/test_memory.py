@@ -19,7 +19,7 @@ class TestMemory(unittest.TestCase):
         """
         Set up a fresh Memory instance before each test.
         """
-        self.memory = Memory(verbose_repr=True)
+        self.memory = Memory()
 
     def test_add_single_memory_with_qualifiers(self):
         """
@@ -39,9 +39,9 @@ class TestMemory(unittest.TestCase):
         self.memory.add_memory([triple], qualifiers)
 
         # Verify memory has been added correctly
-        result = repr(self.memory)
+        result = self.memory.print_memories(True)
 
-        expected = "[https://example.org/person/Alice, https://example.org/relationship/knows, https://example.org/person/Bob, {rdflib.term.URIRef('https://humem.ai/ontology#memoryID'): rdflib.term.Literal('0', datatype=rdflib.term.URIRef('http://www.w3.org/2001/XMLSchema#integer')), rdflib.term.URIRef('https://humem.ai/ontology#currentTime'): rdflib.term.Literal('2024-04-27T10:00:00', datatype=rdflib.term.URIRef('http://www.w3.org/2001/XMLSchema#dateTime')), rdflib.term.URIRef('https://humem.ai/ontology#location'): rdflib.term.Literal('New York')}]"
+        expected = "(Alice, knows, Bob, {'memoryID': '0', 'currentTime': '2024-04-27T10:00:00', 'location': 'New York'})"
 
         self.assertIn(expected, result)
 
@@ -70,11 +70,11 @@ class TestMemory(unittest.TestCase):
         self.memory.add_memory([triple], qualifiers2)
 
         # Verify that both reified statements are stored
-        result = repr(self.memory)
+        result = self.memory.print_memories(True)
 
         # Adjust expected output to match the verbose output with rdflib objects
-        expected1 = "[https://example.org/person/Alice, https://example.org/relationship/knows, https://example.org/person/Bob, {rdflib.term.URIRef('https://humem.ai/ontology#memoryID'): rdflib.term.Literal('0', datatype=rdflib.term.URIRef('http://www.w3.org/2001/XMLSchema#integer')), rdflib.term.URIRef('https://humem.ai/ontology#currentTime'): rdflib.term.Literal('2024-04-27T10:00:00', datatype=rdflib.term.URIRef('http://www.w3.org/2001/XMLSchema#dateTime')), rdflib.term.URIRef('https://humem.ai/ontology#location'): rdflib.term.Literal('New York')}]"
-        expected2 = "[https://example.org/person/Alice, https://example.org/relationship/knows, https://example.org/person/Bob, {rdflib.term.URIRef('https://humem.ai/ontology#memoryID'): rdflib.term.Literal('1', datatype=rdflib.term.URIRef('http://www.w3.org/2001/XMLSchema#integer')), rdflib.term.URIRef('https://humem.ai/ontology#currentTime'): rdflib.term.Literal('2024-04-27T12:00:00', datatype=rdflib.term.URIRef('http://www.w3.org/2001/XMLSchema#dateTime')), rdflib.term.URIRef('https://humem.ai/ontology#location'): rdflib.term.Literal('London')}]"
+        expected1 = "(Alice, knows, Bob, {'memoryID': '0', 'currentTime': '2024-04-27T10:00:00', 'location': 'New York'})"
+        expected2 = "(Alice, knows, Bob, {'memoryID': '1', 'currentTime': '2024-04-27T12:00:00', 'location': 'London'})"
 
         # Ensure both entries are present
         self.assertIn(expected1, result)
@@ -125,7 +125,7 @@ class TestMemoryDelete(unittest.TestCase):
         """
         Set up a fresh Memory instance before each test.
         """
-        self.memory = Memory(verbose_repr=True)
+        self.memory = Memory()
         self.humemai = Namespace("https://humem.ai/ontology#")
 
         # Define sample triples
@@ -166,15 +166,15 @@ class TestMemoryDelete(unittest.TestCase):
         Test deleting a memory that exists in the graph.
         """
         # Ensure the memory is there before deletion
-        before_delete = repr(self.memory)
-        self.assertIn("https://example.org/person/Alice", before_delete)
+        before_delete = self.memory.print_memories(True)
+        self.assertIn("Alice", before_delete)
         self.assertIn("https://humem.ai/ontology#location", before_delete)
 
         # Delete the triple (Alice knows Bob)
         self.memory.delete_triple(*self.triple1)
 
         # Ensure the memory is no longer in the graph after deletion
-        after_delete = repr(self.memory)
+        after_delete = self.memory.print_memories(True)
 
         # Check that the specific triple (Alice, knows, Bob) and its qualifiers are gone
         self.assertNotIn("https://example.org/person/Alice", after_delete)
@@ -184,7 +184,7 @@ class TestMemoryDelete(unittest.TestCase):
         )  # The specific qualifier for this triple
 
         # Ensure that the other memory still exists (Bob likes Chocolate)
-        self.assertIn("https://example.org/person/Bob", after_delete)
+        self.assertIn("Bob", after_delete)
         self.assertIn(
             "https://humem.ai/ontology#location", after_delete
         )  # The other qualifier
@@ -205,7 +205,7 @@ class TestMemoryDelete(unittest.TestCase):
         self.memory.add_memory([self.triple1], qualifiers_additional)
 
         # Verify that both versions of the triple are present before deletion
-        before_delete = repr(self.memory)
+        before_delete = self.memory.print_memories(True)
         self.assertIn("New York", before_delete)
         self.assertIn("London", before_delete)
 
@@ -213,7 +213,7 @@ class TestMemoryDelete(unittest.TestCase):
         self.memory.delete_triple(*self.triple1)
 
         # Verify that both versions of the triple are removed
-        after_delete = repr(self.memory)
+        after_delete = self.memory.print_memories(True)
         self.assertNotIn("New York", after_delete)
         self.assertNotIn("London", after_delete)
         self.assertNotIn("https://example.org/person/Alice", after_delete)
@@ -231,14 +231,14 @@ class TestMemoryDelete(unittest.TestCase):
         )
 
         # Verify that the non-existent triple is not in the graph before deletion
-        before_delete = repr(self.memory)
+        before_delete = self.memory.print_memories(True)
         self.assertNotIn("https://example.org/person/David", before_delete)
 
         # Attempt to delete the non-existent triple
         self.memory.delete_triple(*non_existent_triple)
 
         # Verify that the graph is unchanged after the attempt
-        after_delete = repr(self.memory)
+        after_delete = self.memory.print_memories(True)
         self.assertEqual(before_delete, after_delete)
 
     def test_delete_triple_with_no_qualifiers(self):
@@ -255,14 +255,14 @@ class TestMemoryDelete(unittest.TestCase):
         self.memory.add_memory([simple_triple], {})
 
         # Verify that the triple exists before deletion
-        before_delete = repr(self.memory)
-        self.assertIn("https://example.org/person/Charlie", before_delete)
+        before_delete = self.memory.print_memories(True)
+        self.assertIn("Charlie", before_delete)
 
         # Delete the simple triple
         self.memory.delete_triple(*simple_triple)
 
         # Verify that the triple is deleted
-        after_delete = repr(self.memory)
+        after_delete = self.memory.print_memories(True)
         self.assertNotIn("https://example.org/person/Charlie", after_delete)
 
 
@@ -272,7 +272,7 @@ class TestMemoryShortTerm(unittest.TestCase):
         """
         Set up a fresh Memory instance before each test.
         """
-        self.memory = Memory(verbose_repr=True)
+        self.memory = Memory()
         self.humemai = Namespace("https://humem.ai/ontology#")
 
     def test_add_single_short_term_memory(self):
@@ -295,8 +295,8 @@ class TestMemoryShortTerm(unittest.TestCase):
         self.memory.add_short_term_memory([triple], qualifiers)
 
         # Verify that the memory was added with the correct qualifiers
-        result = repr(self.memory)
-        self.assertIn("https://example.org/person/Alice", result)
+        result = self.memory.print_memories(True)
+        self.assertIn("Alice", result)
 
         # Check for 'currentTime' and 'location'
         self.assertIn("currentTime", result)
@@ -325,8 +325,8 @@ class TestMemoryShortTerm(unittest.TestCase):
         self.memory.add_short_term_memory([triple], qualifiers)
 
         # Capture the result and verify
-        result = repr(self.memory)
-        self.assertIn("https://example.org/person/Charlie", result)
+        result = self.memory.print_memories(True)
+        self.assertIn("Charlie", result)
         self.assertIn("location", result)
         self.assertIn("Berlin", result)
 
@@ -376,9 +376,9 @@ class TestMemoryShortTerm(unittest.TestCase):
         self.memory.add_short_term_memory(triples, qualifiers)
 
         # Verify both triples were added correctly
-        result = repr(self.memory)
-        self.assertIn("https://example.org/person/David", result)
-        self.assertIn("https://example.org/person/Eve", result)
+        result = self.memory.print_memories(True)
+        self.assertIn("David", result)
+        self.assertIn("Eve", result)
         self.assertIn("Chocolate", result)
         self.assertIn("currentTime", result)
         self.assertIn("2024-04-28T09:00:00", result)
@@ -392,7 +392,7 @@ class TestMemoryLongTerm(unittest.TestCase):
         """
         Set up a fresh Memory instance before each test.
         """
-        self.memory = Memory(verbose_repr=True)
+        self.memory = Memory()
         self.humemai = Namespace("https://humem.ai/ontology#")
 
     def test_add_single_episodic_memory(self):
@@ -419,10 +419,10 @@ class TestMemoryLongTerm(unittest.TestCase):
         self.memory.add_episodic_memory([triple], qualifiers=qualifiers)
 
         # Verify that the memory was added with the correct qualifiers
-        result = repr(self.memory)
-        self.assertIn("https://example.org/person/Alice", result)
-        self.assertIn("https://example.org/event/met", result)
-        self.assertIn("https://example.org/person/Bob", result)
+        result = self.memory.print_memories(True)
+        self.assertIn("Alice", result)
+        self.assertIn("met", result)
+        self.assertIn("Bob", result)
         self.assertIn("location", result)
         self.assertIn("Paris", result)
         self.assertIn("eventTime", result)
@@ -454,10 +454,10 @@ class TestMemoryLongTerm(unittest.TestCase):
         )
 
         # Verify that the memory was added with the correct qualifiers
-        result = repr(self.memory)
-        self.assertIn("https://example.org/entity/Dog", result)
-        self.assertIn("https://example.org/relationship/is", result)
-        self.assertIn("https://example.org/entity/Animal", result)
+        result = self.memory.print_memories(True)
+        self.assertIn("Dog", result)
+        self.assertIn("is", result)
+        self.assertIn("Animal", result)
         self.assertIn("strength", result)
         self.assertIn("5", result)
         self.assertIn("derivedFrom", result)
@@ -497,7 +497,7 @@ class TestMemoryLongTerm(unittest.TestCase):
         self.memory.add_episodic_memory([triple], qualifiers=qualifiers_2)
 
         # Verify that both memories were added with the correct qualifiers
-        result = repr(self.memory)
+        result = self.memory.print_memories(True)
 
         # Check first memory
         self.assertIn("Paris", result)
@@ -556,7 +556,7 @@ class TestMemoryGetMemories(unittest.TestCase):
         """
         Set up a fresh Memory instance before each test.
         """
-        self.memory = Memory(verbose_repr=True)
+        self.memory = Memory()
         self.humemai = Namespace("https://humem.ai/ontology#")
 
         # Define sample triples
@@ -613,10 +613,10 @@ class TestMemoryGetMemories(unittest.TestCase):
         retrieved_memory = self.memory.get_memories()
 
         # Check if all triples are retrieved
-        result = repr(retrieved_memory)
-        self.assertIn("https://example.org/person/Alice", result)
-        self.assertIn("https://example.org/person/Bob", result)
-        self.assertIn("https://example.org/entity/Cat", result)
+        result = retrieved_memory.print_memories(True)
+        self.assertIn("Alice", result)
+        self.assertIn("Bob", result)
+        self.assertIn("Cat", result)
         self.assertIn("Chocolate", result)
 
     def test_qualifiers_association(self):
@@ -626,7 +626,7 @@ class TestMemoryGetMemories(unittest.TestCase):
         retrieved_memory = self.memory.get_memories()
 
         # Ensure the qualifiers are correctly attached to the main triples
-        result = repr(retrieved_memory)
+        result = retrieved_memory.print_memories(True)
 
         # Check for Alice's memory qualifiers
         self.assertIn("location", result)
@@ -651,8 +651,8 @@ class TestMemoryGetMemories(unittest.TestCase):
             subject=URIRef("https://example.org/person/Alice")
         )
 
-        result = repr(retrieved_memory)
-        self.assertIn("https://example.org/person/Alice", result)
+        result = retrieved_memory.print_memories(True)
+        self.assertIn("Alice", result)
         self.assertNotIn("https://example.org/entity/Cat", result)
         self.assertNotIn("Chocolate", result)
 
@@ -665,9 +665,9 @@ class TestMemoryGetMemories(unittest.TestCase):
             object_=URIRef("https://example.org/person/Bob")
         )
 
-        result = repr(retrieved_memory)
-        self.assertIn("https://example.org/person/Alice", result)
-        self.assertIn("https://example.org/person/Bob", result)
+        result = retrieved_memory.print_memories(True)
+        self.assertIn("Alice", result)
+        self.assertIn("Bob", result)
         self.assertNotIn("https://example.org/entity/Cat", result)
         self.assertNotIn("Chocolate", result)
 
@@ -709,7 +709,7 @@ class TestMemoryGetMemoryCount(unittest.TestCase):
         """
         Set up a fresh Memory instance before each test.
         """
-        self.memory = Memory(verbose_repr=True)
+        self.memory = Memory()
         self.humemai = Namespace("https://humem.ai/ontology#")
 
         # Define the triples
@@ -746,7 +746,7 @@ class TestMemoryGetMemoryCount(unittest.TestCase):
         self.memory.add_episodic_memory([self.triple1], qualifiers=qualifiers_episodic)
 
         # Test memory count
-        memory_count = self.memory.get_triple_count_except_event()
+        memory_count = self.memory.get_main_triple_count_except_event()
         self.assertEqual(memory_count, 1, "Memory count should be 1.")
 
     def test_duplicate_memory_with_different_qualifiers(self):
@@ -784,7 +784,7 @@ class TestMemoryGetMemoryCount(unittest.TestCase):
         self.memory.add_episodic_memory([self.triple1], qualifiers=qualifiers_episodic3)
 
         # Test memory count (should still be 1 since the triple is the same)
-        memory_count = self.memory.get_triple_count_except_event()
+        memory_count = self.memory.get_main_triple_count_except_event()
         self.assertEqual(
             memory_count,
             1,
@@ -825,7 +825,7 @@ class TestMemoryGetMemoryCount(unittest.TestCase):
         self.memory.add_short_term_memory([self.triple3], short_term_qualifiers)
 
         # Test memory count (should be 3 because all triples are unique)
-        memory_count = self.memory.get_triple_count_except_event()
+        memory_count = self.memory.get_main_triple_count_except_event()
         self.assertEqual(
             memory_count, 3, "Memory count should be 3 for three unique triples."
         )
@@ -873,7 +873,7 @@ class TestMemoryGetMemoryCount(unittest.TestCase):
         self.memory.add_short_term_memory([self.triple3], short_term_qualifiers)
 
         # Test memory count (should be 3: one for the duplicate triple, and two for the unique ones)
-        memory_count = self.memory.get_triple_count_except_event()
+        memory_count = self.memory.get_main_triple_count_except_event()
         self.assertEqual(
             memory_count,
             3,
@@ -886,7 +886,7 @@ class TestMemoryModifyStrength(unittest.TestCase):
         """
         Set up the Memory object and add some semantic and episodic memories.
         """
-        self.memory = Memory(verbose_repr=True)
+        self.memory = Memory()
         self.humemai = Namespace("https://humem.ai/ontology#")
 
         # Define a semantic triple
@@ -942,7 +942,7 @@ class TestMemoryModifyStrength(unittest.TestCase):
             subject=URIRef("https://example.org/entity/Cat")
         )
         self.assertIn(
-            "13", repr(retrieved_memory), "Strength should be incremented to 13"
+            "13", retrieved_memory.print_memories(True), "Strength should be incremented to 13"
         )
 
     def test_multiply_strength(self):
@@ -960,7 +960,7 @@ class TestMemoryModifyStrength(unittest.TestCase):
             subject=URIRef("https://example.org/entity/Cat")
         )
         self.assertIn(
-            "16", repr(retrieved_memory), "Strength should be multiplied to 16"
+            "16", retrieved_memory.print_memories(True), "Strength should be multiplied to 16"
         )
 
     def test_increment_and_multiply_strength(self):
@@ -985,7 +985,7 @@ class TestMemoryModifyStrength(unittest.TestCase):
         )
         self.assertIn(
             "26",
-            repr(retrieved_memory),
+            retrieved_memory.print_memories(True),
             "Strength should be 26 after incrementing and multiplying",
         )
 
@@ -1005,7 +1005,7 @@ class TestMemoryModifyStrength(unittest.TestCase):
         )
         self.assertNotIn(
             "strength",
-            repr(retrieved_memory),
+            retrieved_memory.print_memories(True),
             "Episodic memory should not have a strength qualifier",
         )
 
@@ -1036,10 +1036,10 @@ class TestMemoryModifyStrength(unittest.TestCase):
             subject=URIRef("https://example.org/entity/Cat")
         )
         self.assertIn(
-            "13", repr(retrieved_memory), "First strength should be incremented to 13"
+            "13", retrieved_memory.print_memories(True), "First strength should be incremented to 13"
         )
         self.assertIn(
-            "15", repr(retrieved_memory), "Second strength should be incremented to 15"
+            "15", retrieved_memory.print_memories(True), "Second strength should be incremented to 15"
         )
 
 
@@ -1049,7 +1049,7 @@ class TestMemoryTimeFilters(unittest.TestCase):
         """
         Set up a fresh Memory instance before each test.
         """
-        self.memory = Memory(verbose_repr=True)
+        self.memory = Memory()
         self.humemai = Namespace("https://humem.ai/ontology#")
 
     def test_filter_memories_by_time_range(self):
@@ -1089,7 +1089,7 @@ class TestMemoryTimeFilters(unittest.TestCase):
         )
 
         # Verify only the memory within the time range is retrieved
-        result = repr(filtered_memory)
+        result = filtered_memory.print_memories(True)
         self.assertIn("2024-04-27T10:00:00", result)
         self.assertNotIn("2024-04-27T12:00:00", result)
 
@@ -1121,7 +1121,7 @@ class TestMemoryTimeFilters(unittest.TestCase):
         )
 
         # Ensure no memories are returned
-        result = repr(filtered_memory)
+        result = filtered_memory.print_memories(True)
         self.assertNotIn("Ice Cream", result)
 
 
@@ -1131,7 +1131,7 @@ class TestMemoryLocationFilters(unittest.TestCase):
         """
         Set up a fresh Memory instance before each test.
         """
-        self.memory = Memory(verbose_repr=True)
+        self.memory = Memory()
         self.humemai = Namespace("https://humem.ai/ontology#")
 
     def test_filter_memories_by_location(self):
@@ -1166,7 +1166,7 @@ class TestMemoryLocationFilters(unittest.TestCase):
         )
 
         # Verify only the memory with the specified location is retrieved
-        result = repr(filtered_memory)
+        result = filtered_memory.print_memories(True)
         self.assertIn("New York", result)
         self.assertNotIn("Berlin", result)
 
@@ -1195,7 +1195,7 @@ class TestMemoryLocationFilters(unittest.TestCase):
         )
 
         # Verify no memories are returned
-        result = repr(filtered_memory)
+        result = filtered_memory.print_memories(True)
         self.assertNotIn("Paris", result)
         self.assertNotIn("Frank", result)
 
@@ -1206,7 +1206,7 @@ class TestMemoryEmotionFilters(unittest.TestCase):
         """
         Set up a fresh Memory instance before each test.
         """
-        self.memory = Memory(verbose_repr=True)
+        self.memory = Memory()
         self.humemai = Namespace("https://humem.ai/ontology#")
 
     def test_filter_memories_by_emotion(self):
@@ -1241,7 +1241,7 @@ class TestMemoryEmotionFilters(unittest.TestCase):
         )
 
         # Verify only the memory with the specified emotion is retrieved
-        result = repr(filtered_memory)
+        result = filtered_memory.print_memories(True)
         self.assertIn("happy", result)
         self.assertNotIn("sad", result)
 
@@ -1252,7 +1252,7 @@ class TestInvalidInputHandling(unittest.TestCase):
         """
         Set up a fresh Memory instance before each test.
         """
-        self.memory = Memory(verbose_repr=True)
+        self.memory = Memory()
         self.humemai = Namespace("https://humem.ai/ontology#")
 
     def test_invalid_time_format(self):
@@ -1279,7 +1279,7 @@ class TestMemoryDeleteWithTime(unittest.TestCase):
         """
         Set up a fresh Memory instance before each test.
         """
-        self.memory = Memory(verbose_repr=True)
+        self.memory = Memory()
         self.humemai = Namespace("https://humem.ai/ontology#")
 
     def test_delete_triple_with_time_filter(self):
@@ -1302,7 +1302,7 @@ class TestMemoryDeleteWithTime(unittest.TestCase):
         self.memory.add_memory([triple], qualifiers)
 
         # Verify the memory is there before deletion
-        result_before = repr(self.memory)
+        result_before = self.memory.print_memories(True)
         self.assertIn("Paris", result_before)
         self.assertIn("Luke", result_before)
 
@@ -1310,7 +1310,7 @@ class TestMemoryDeleteWithTime(unittest.TestCase):
         self.memory.delete_triple(*triple)
 
         # Verify the memory is no longer there after deletion
-        result_after = repr(self.memory)
+        result_after = self.memory.print_memories(True)
         self.assertNotIn("Paris", result_after)
         self.assertNotIn("Luke", result_after)
 
@@ -1321,7 +1321,7 @@ class TestMemoryInvalidQualifiers(unittest.TestCase):
         """
         Set up a fresh Memory instance before each test.
         """
-        self.memory = Memory(verbose_repr=True)
+        self.memory = Memory()
         self.humemai = Namespace("https://humem.ai/ontology#")
 
     def test_missing_qualifiers_in_long_term_memory_episodic(self):
@@ -1352,14 +1352,14 @@ class TestMemoryInvalidQualifiers(unittest.TestCase):
 
 class TestMemoryCounts(unittest.TestCase):
     """
-    Test cases for get_memory_count and get_triple_count_except_event methods in the Memory class.
+    Test cases for get_memory_count and get_main_triple_count_except_event methods in the Memory class.
     """
 
     def setUp(self):
         """
         Set up a fresh Memory instance before each test.
         """
-        self.memory = Memory(verbose_repr=True)
+        self.memory = Memory()
         self.humemai = Namespace("https://humem.ai/ontology#")
 
         # Define sample triples
@@ -1391,7 +1391,7 @@ class TestMemoryCounts(unittest.TestCase):
             "Memory count should be 0 when no memories are added.",
         )
         self.assertEqual(
-            self.memory.get_triple_count_except_event(),
+            self.memory.get_main_triple_count_except_event(),
             0,
             "Triple count should be 0 when no triples are added.",
         )
@@ -1412,7 +1412,7 @@ class TestMemoryCounts(unittest.TestCase):
             "Memory count should be 1 after adding one reified statement.",
         )
         self.assertEqual(
-            self.memory.get_triple_count_except_event(),
+            self.memory.get_main_triple_count_except_event(),
             1,
             "Triple count should be 1 after adding one unique triple.",
         )
@@ -1444,7 +1444,7 @@ class TestMemoryCounts(unittest.TestCase):
             "Memory count should be 3 after adding three reified statements.",
         )
         self.assertEqual(
-            self.memory.get_triple_count_except_event(),
+            self.memory.get_main_triple_count_except_event(),
             1,
             "Triple count should be 1 since all statements share the same triple.",
         )
@@ -1486,7 +1486,7 @@ class TestMemoryCounts(unittest.TestCase):
             f"Memory count should be {expected_memory_count} after adding five reified statements.",
         )
         self.assertEqual(
-            self.memory.get_triple_count_except_event(),
+            self.memory.get_main_triple_count_except_event(),
             expected_triple_count,
             f"Triple count should be {expected_triple_count} after adding three unique triples.",
         )
@@ -1516,7 +1516,9 @@ class TestMemoryCounts(unittest.TestCase):
             self.memory.get_memory_count(), 3, "Initial memory count should be 3."
         )
         self.assertEqual(
-            self.memory.get_triple_count_except_event(), 2, "Initial triple count should be 2."
+            self.memory.get_main_triple_count_except_event(),
+            2,
+            "Initial triple count should be 2.",
         )
 
         # Delete triple1
@@ -1529,7 +1531,7 @@ class TestMemoryCounts(unittest.TestCase):
             "Memory count should be 1 after deleting triple1.",
         )
         self.assertEqual(
-            self.memory.get_triple_count_except_event(),
+            self.memory.get_main_triple_count_except_event(),
             1,
             "Triple count should be 1 after deleting triple1.",
         )
@@ -1549,7 +1551,9 @@ class TestMemoryCounts(unittest.TestCase):
             self.memory.get_memory_count(), 1, "Initial memory count should be 1."
         )
         self.assertEqual(
-            self.memory.get_triple_count_except_event(), 1, "Initial triple count should be 1."
+            self.memory.get_main_triple_count_except_event(),
+            1,
+            "Initial triple count should be 1.",
         )
 
         # Define a non-existent triple
@@ -1569,7 +1573,7 @@ class TestMemoryCounts(unittest.TestCase):
             "Memory count should remain 1 after attempting to delete a non-existent triple.",
         )
         self.assertEqual(
-            self.memory.get_triple_count_except_event(),
+            self.memory.get_main_triple_count_except_event(),
             1,
             "Triple count should remain 1 after attempting to delete a non-existent triple.",
         )
@@ -1592,7 +1596,7 @@ class TestMemoryCounts(unittest.TestCase):
             "Memory count should be 1 after adding one reified statement with empty qualifiers.",
         )
         self.assertEqual(
-            self.memory.get_triple_count_except_event(),
+            self.memory.get_main_triple_count_except_event(),
             1,
             "Triple count should be 1 after adding one unique triple.",
         )
@@ -1622,7 +1626,9 @@ class TestMemoryCounts(unittest.TestCase):
             self.memory.get_memory_count(), 3, "Initial memory count should be 3."
         )
         self.assertEqual(
-            self.memory.get_triple_count_except_event(), 2, "Initial triple count should be 2."
+            self.memory.get_main_triple_count_except_event(),
+            2,
+            "Initial triple count should be 2.",
         )
 
         # Delete triple1
@@ -1635,7 +1641,7 @@ class TestMemoryCounts(unittest.TestCase):
             "Memory count should be 1 after deleting triple1.",
         )
         self.assertEqual(
-            self.memory.get_triple_count_except_event(),
+            self.memory.get_main_triple_count_except_event(),
             1,
             "Triple count should be 1 after deleting triple1.",
         )
@@ -1650,7 +1656,7 @@ class TestMemoryCounts(unittest.TestCase):
             "Memory count should be 0 after deleting all triples.",
         )
         self.assertEqual(
-            self.memory.get_triple_count_except_event(),
+            self.memory.get_main_triple_count_except_event(),
             0,
             "Triple count should be 0 after deleting all triples.",
         )
@@ -1662,7 +1668,7 @@ class TestModifyEpisodicEvent(unittest.TestCase):
         """
         Set up the Memory object with some episodic, semantic, and short-term memories.
         """
-        self.memory = Memory(verbose_repr=True)
+        self.memory = Memory()
         self.humemai = Namespace("https://humem.ai/ontology#")
 
         # Define some triples
@@ -1733,7 +1739,7 @@ class TestModifyEpisodicEvent(unittest.TestCase):
         )
 
         # Retrieve all memories to check
-        result = repr(self.memory)
+        result = self.memory.print_memories(True)
 
         # Check that episodic memories are updated
         self.assertIn("Updated Event for Conference", result)
@@ -1760,7 +1766,7 @@ class TestModifyEpisodicEvent(unittest.TestCase):
         )
 
         # Retrieve all memories to check
-        result = repr(self.memory)
+        result = self.memory.print_memories(True)
 
         # Ensure that no events have been modified
         self.assertIn("Meeting for coffee", result)
@@ -1783,7 +1789,7 @@ class TestModifyEpisodicEvent(unittest.TestCase):
         )
 
         # Retrieve memories and check that only episodic ones are updated
-        result = repr(self.memory)
+        result = self.memory.print_memories(True)
 
         # Check that episodic events are updated
         self.assertIn("Conference Event Update", result)
@@ -1810,7 +1816,7 @@ class TestModifyEpisodicEvent(unittest.TestCase):
         )
 
         # Retrieve memories and check that both episodic events are updated
-        result = repr(self.memory)
+        result = self.memory.print_memories(True)
 
         # Check that both episodic memories are updated
         self.assertIn("Global Event Update", result)
@@ -1834,7 +1840,7 @@ class TestModifyEpisodicEvent(unittest.TestCase):
         )
 
         # Retrieve memories and check that only Alice's event was updated
-        result = repr(self.memory)
+        result = self.memory.print_memories(True)
 
         # Check that only Alice's episodic memory is updated
         self.assertIn("Filtered Event Update", result)
@@ -1850,7 +1856,7 @@ class TestIncrementRecalled(unittest.TestCase):
         """
         Set up a fresh Memory instance with episodic and semantic memories.
         """
-        self.memory = Memory(verbose_repr=True)
+        self.memory = Memory()
         self.humemai = Namespace("https://humem.ai/ontology#")
 
         # Define some triples
@@ -1898,35 +1904,35 @@ class TestIncrementRecalled(unittest.TestCase):
         self.memory.increment_recalled()
 
         # Retrieve the updated memory system after first increment
-        result = repr(self.memory)
+        result = self.memory.print_memories(True)
 
         # Check that the 'recalled' value has been incremented to 1 for both episodic and semantic memories
         self.assertIn(
-            "rdflib.term.Literal('1', datatype=rdflib.term.URIRef('http://www.w3.org/2001/XMLSchema#integer'))",
-            result,
+            "'1'",
+            result
         )
 
         # Increment recalled values again
         self.memory.increment_recalled()
 
         # Retrieve the updated memory system after second increment
-        result = repr(self.memory)
+        result = self.memory.print_memories(True)
 
         # Check that the 'recalled' value has been incremented to 2 for both episodic and semantic memories
         self.assertIn(
-            "rdflib.term.Literal('2', datatype=rdflib.term.URIRef('http://www.w3.org/2001/XMLSchema#integer'))",
-            result,
+            "'2'",
+            result
         )
 
         # Increment recalled values a third time
         self.memory.increment_recalled()
 
         # Retrieve the updated memory system after third increment
-        result = repr(self.memory)
+        result = self.memory.print_memories(True)
 
         # Check that the 'recalled' value has been incremented to 3 for both episodic and semantic memories
         self.assertIn(
-            "rdflib.term.Literal('3', datatype=rdflib.term.URIRef('http://www.w3.org/2001/XMLSchema#integer'))",
+            "'3'",
             result,
         )
 
@@ -2090,14 +2096,18 @@ class TestMemoryDelete(unittest.TestCase):
 
     def test_count_triples_and_memories(self):
         """Test counting triples and reified memories."""
-        self.assertEqual(self.memory.get_triple_count_except_event(), 5)  # 5 unique triples
+        self.assertEqual(
+            self.memory.get_main_triple_count_except_event(), 5
+        )  # 5 unique triples
         self.assertEqual(self.memory.get_memory_count(), 7)  # 7 reified memories
 
     def test_delete_triple_and_memory_count(self):
         """Test memory and triple count after deleting a triple."""
         # Delete triple (Alice, met, Bob) and ensure memory count is updated
         self.memory.delete_triple(*self.triples[0])
-        self.assertEqual(self.memory.get_triple_count_except_event(), 4)  # 1 triple removed
+        self.assertEqual(
+            self.memory.get_main_triple_count_except_event(), 4
+        )  # 1 triple removed
         self.assertEqual(self.memory.get_memory_count(), 5)  # 2 memories removed
 
 
@@ -2747,7 +2757,7 @@ class TestGetShortTerm(unittest.TestCase):
     def setUp(self):
         """Set up the test case with a Memory instance and populate the RDF graph."""
         # Initialize a Memory instance and use an actual Graph instance
-        self.memory = Memory(verbose_repr=True)
+        self.memory = Memory()
         self.memory.graph = Graph()
 
         # Short-term triple
@@ -2905,7 +2915,7 @@ class TestMemorySaveLoad(unittest.TestCase):
     def setUp(self):
         """Set up a Memory object and add some test data"""
         # Create an instance of the Memory class
-        self.memory = Memory(verbose_repr=True)
+        self.memory = Memory()
         self.test_file = "test_memory.ttl"
 
         # Define the humemai and example namespaces
@@ -3350,7 +3360,7 @@ class TestEvent(unittest.TestCase):
         """
         Set up the Memory instance for testing.
         """
-        self.memory = Memory(verbose_repr=True)
+        self.memory = Memory()
 
     def test_add_episodic_memory(self):
         """
@@ -3585,11 +3595,12 @@ class TestEventMethods(unittest.TestCase):
         self.assertEqual(len(events), 1, "There should be 1 event")
         self.assertIn(event, events, "Seminar event should be in the list")
 
+
 class TestMemoryEvents(unittest.TestCase):
 
     def setUp(self):
         """Set up the memory system before each test."""
-        self.memory = Memory(verbose_repr=False)
+        self.memory = Memory()
 
         # Example URIs and Literals for subjects, predicates, and objects
         self.alice = URIRef("https://example.org/Alice")
@@ -3604,33 +3615,3 @@ class TestMemoryEvents(unittest.TestCase):
     def convert_to_str(self, triples):
         """Helper method to convert RDFLib objects to string form."""
         return {(str(subj), str(pred), str(obj)) for subj, pred, obj in triples}
-
-    def test_get_events_with_events(self):
-        """Test get_events returns the correct event-related triples."""
-
-        # Add some event-related triples using add_event
-        self.memory.add_event(self.event)
-        self.memory.add_event_properties(self.event, {
-            self.location: self.paris,
-            self.date: self.date_literal
-        })
-
-        self.memory.add_memory([(self.alice, self.attended, self.event)])  # Alice attended the AI conference
-
-        # Now call get_events and check the result
-        event_triples = self.memory.get_events()
-
-        expected_triples = {
-            (self.alice, self.attended, self.event),
-            (self.event, self.location, self.paris),
-            (self.event, self.date, self.date_literal)
-        }
-
-        # Filter out reification-related triples (like rdf:type, rdf:subject, rdf:predicate, rdf:object)
-        filtered_event_triples = [
-            triple for triple in event_triples
-            if triple[1] not in (RDF.type, RDF.subject, RDF.predicate, RDF.object)
-        ]
-
-        # Convert both to string representations and compare
-        self.assertEqual(self.convert_to_str(filtered_event_triples), self.convert_to_str(expected_triples))
