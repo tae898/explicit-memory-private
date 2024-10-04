@@ -465,7 +465,7 @@ class Memory:
 
         return filtered_memory
 
-    def get_triple_count(self) -> int:
+    def get_triple_count_except_event(self) -> int:
         """
         Count the number of unique memories (subject-predicate-object triples) in the
         graph. This does not count reified statements.

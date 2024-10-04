@@ -746,7 +746,7 @@ class TestMemoryGetMemoryCount(unittest.TestCase):
         self.memory.add_episodic_memory([self.triple1], qualifiers=qualifiers_episodic)
 
         # Test memory count
-        memory_count = self.memory.get_triple_count()
+        memory_count = self.memory.get_triple_count_except_event()
         self.assertEqual(memory_count, 1, "Memory count should be 1.")
 
     def test_duplicate_memory_with_different_qualifiers(self):
@@ -784,7 +784,7 @@ class TestMemoryGetMemoryCount(unittest.TestCase):
         self.memory.add_episodic_memory([self.triple1], qualifiers=qualifiers_episodic3)
 
         # Test memory count (should still be 1 since the triple is the same)
-        memory_count = self.memory.get_triple_count()
+        memory_count = self.memory.get_triple_count_except_event()
         self.assertEqual(
             memory_count,
             1,
@@ -825,7 +825,7 @@ class TestMemoryGetMemoryCount(unittest.TestCase):
         self.memory.add_short_term_memory([self.triple3], short_term_qualifiers)
 
         # Test memory count (should be 3 because all triples are unique)
-        memory_count = self.memory.get_triple_count()
+        memory_count = self.memory.get_triple_count_except_event()
         self.assertEqual(
             memory_count, 3, "Memory count should be 3 for three unique triples."
         )
@@ -873,7 +873,7 @@ class TestMemoryGetMemoryCount(unittest.TestCase):
         self.memory.add_short_term_memory([self.triple3], short_term_qualifiers)
 
         # Test memory count (should be 3: one for the duplicate triple, and two for the unique ones)
-        memory_count = self.memory.get_triple_count()
+        memory_count = self.memory.get_triple_count_except_event()
         self.assertEqual(
             memory_count,
             3,
@@ -1352,7 +1352,7 @@ class TestMemoryInvalidQualifiers(unittest.TestCase):
 
 class TestMemoryCounts(unittest.TestCase):
     """
-    Test cases for get_memory_count and get_triple_count methods in the Memory class.
+    Test cases for get_memory_count and get_triple_count_except_event methods in the Memory class.
     """
 
     def setUp(self):
@@ -1391,7 +1391,7 @@ class TestMemoryCounts(unittest.TestCase):
             "Memory count should be 0 when no memories are added.",
         )
         self.assertEqual(
-            self.memory.get_triple_count(),
+            self.memory.get_triple_count_except_event(),
             0,
             "Triple count should be 0 when no triples are added.",
         )
@@ -1412,7 +1412,7 @@ class TestMemoryCounts(unittest.TestCase):
             "Memory count should be 1 after adding one reified statement.",
         )
         self.assertEqual(
-            self.memory.get_triple_count(),
+            self.memory.get_triple_count_except_event(),
             1,
             "Triple count should be 1 after adding one unique triple.",
         )
@@ -1444,7 +1444,7 @@ class TestMemoryCounts(unittest.TestCase):
             "Memory count should be 3 after adding three reified statements.",
         )
         self.assertEqual(
-            self.memory.get_triple_count(),
+            self.memory.get_triple_count_except_event(),
             1,
             "Triple count should be 1 since all statements share the same triple.",
         )
@@ -1486,7 +1486,7 @@ class TestMemoryCounts(unittest.TestCase):
             f"Memory count should be {expected_memory_count} after adding five reified statements.",
         )
         self.assertEqual(
-            self.memory.get_triple_count(),
+            self.memory.get_triple_count_except_event(),
             expected_triple_count,
             f"Triple count should be {expected_triple_count} after adding three unique triples.",
         )
@@ -1516,7 +1516,7 @@ class TestMemoryCounts(unittest.TestCase):
             self.memory.get_memory_count(), 3, "Initial memory count should be 3."
         )
         self.assertEqual(
-            self.memory.get_triple_count(), 2, "Initial triple count should be 2."
+            self.memory.get_triple_count_except_event(), 2, "Initial triple count should be 2."
         )
 
         # Delete triple1
@@ -1529,7 +1529,7 @@ class TestMemoryCounts(unittest.TestCase):
             "Memory count should be 1 after deleting triple1.",
         )
         self.assertEqual(
-            self.memory.get_triple_count(),
+            self.memory.get_triple_count_except_event(),
             1,
             "Triple count should be 1 after deleting triple1.",
         )
@@ -1549,7 +1549,7 @@ class TestMemoryCounts(unittest.TestCase):
             self.memory.get_memory_count(), 1, "Initial memory count should be 1."
         )
         self.assertEqual(
-            self.memory.get_triple_count(), 1, "Initial triple count should be 1."
+            self.memory.get_triple_count_except_event(), 1, "Initial triple count should be 1."
         )
 
         # Define a non-existent triple
@@ -1569,7 +1569,7 @@ class TestMemoryCounts(unittest.TestCase):
             "Memory count should remain 1 after attempting to delete a non-existent triple.",
         )
         self.assertEqual(
-            self.memory.get_triple_count(),
+            self.memory.get_triple_count_except_event(),
             1,
             "Triple count should remain 1 after attempting to delete a non-existent triple.",
         )
@@ -1592,7 +1592,7 @@ class TestMemoryCounts(unittest.TestCase):
             "Memory count should be 1 after adding one reified statement with empty qualifiers.",
         )
         self.assertEqual(
-            self.memory.get_triple_count(),
+            self.memory.get_triple_count_except_event(),
             1,
             "Triple count should be 1 after adding one unique triple.",
         )
@@ -1622,7 +1622,7 @@ class TestMemoryCounts(unittest.TestCase):
             self.memory.get_memory_count(), 3, "Initial memory count should be 3."
         )
         self.assertEqual(
-            self.memory.get_triple_count(), 2, "Initial triple count should be 2."
+            self.memory.get_triple_count_except_event(), 2, "Initial triple count should be 2."
         )
 
         # Delete triple1
@@ -1635,7 +1635,7 @@ class TestMemoryCounts(unittest.TestCase):
             "Memory count should be 1 after deleting triple1.",
         )
         self.assertEqual(
-            self.memory.get_triple_count(),
+            self.memory.get_triple_count_except_event(),
             1,
             "Triple count should be 1 after deleting triple1.",
         )
@@ -1650,7 +1650,7 @@ class TestMemoryCounts(unittest.TestCase):
             "Memory count should be 0 after deleting all triples.",
         )
         self.assertEqual(
-            self.memory.get_triple_count(),
+            self.memory.get_triple_count_except_event(),
             0,
             "Triple count should be 0 after deleting all triples.",
         )
@@ -2090,14 +2090,14 @@ class TestMemoryDelete(unittest.TestCase):
 
     def test_count_triples_and_memories(self):
         """Test counting triples and reified memories."""
-        self.assertEqual(self.memory.get_triple_count(), 5)  # 5 unique triples
+        self.assertEqual(self.memory.get_triple_count_except_event(), 5)  # 5 unique triples
         self.assertEqual(self.memory.get_memory_count(), 7)  # 7 reified memories
 
     def test_delete_triple_and_memory_count(self):
         """Test memory and triple count after deleting a triple."""
         # Delete triple (Alice, met, Bob) and ensure memory count is updated
         self.memory.delete_triple(*self.triples[0])
-        self.assertEqual(self.memory.get_triple_count(), 4)  # 1 triple removed
+        self.assertEqual(self.memory.get_triple_count_except_event(), 4)  # 1 triple removed
         self.assertEqual(self.memory.get_memory_count(), 5)  # 2 memories removed
 
 

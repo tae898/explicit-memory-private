@@ -185,7 +185,7 @@ class TestMemorySystem(unittest.TestCase):
             trigger_node=trigger_node, hops=0
         )
 
-        self.assertEqual(working_memory.get_triple_count(), 2)
+        self.assertEqual(working_memory.get_triple_count_except_event(), 2)
         self.assertEqual(working_memory.get_memory_count(), 4)
 
     def test_working_memory_hop_1(self):
@@ -195,7 +195,7 @@ class TestMemorySystem(unittest.TestCase):
             trigger_node=trigger_node, hops=1
         )
 
-        self.assertEqual(working_memory.get_triple_count(), 5)
+        self.assertEqual(working_memory.get_triple_count_except_event(), 5)
         self.assertEqual(working_memory.get_memory_count(), 9)
 
     def test_working_memory_hop_2(self):
@@ -205,7 +205,7 @@ class TestMemorySystem(unittest.TestCase):
             trigger_node=trigger_node, hops=2
         )
 
-        self.assertEqual(working_memory.get_triple_count(), 10)
+        self.assertEqual(working_memory.get_triple_count_except_event(), 10)
         self.assertEqual(working_memory.get_memory_count(), 16)
 
     def test_working_memory_hop_3(self):
@@ -215,14 +215,14 @@ class TestMemorySystem(unittest.TestCase):
             trigger_node=trigger_node, hops=3
         )
 
-        self.assertEqual(working_memory.get_triple_count(), 11)
+        self.assertEqual(working_memory.get_triple_count_except_event(), 11)
         self.assertEqual(working_memory.get_memory_count(), 19)
 
     def test_working_memory_include_all_long_term(self):
         """Test that all long-term memories are included when include_all_long_term=True."""
         working_memory = self.memory.get_working_memory(include_all_long_term=True)
 
-        self.assertEqual(working_memory.get_triple_count(), 11)
+        self.assertEqual(working_memory.get_triple_count_except_event(), 11)
         self.assertEqual(working_memory.get_memory_count(), 19)
 
     def test_recalled_value_increment(self):
@@ -255,7 +255,7 @@ class TestMemorySystem(unittest.TestCase):
             URIRef("https://example.org/person/Alice"), hops=1
         )
 
-        self.assertEqual(working_memory.get_triple_count(), 0)
+        self.assertEqual(working_memory.get_triple_count_except_event(), 0)
         self.assertEqual(working_memory.get_memory_count(), 0)
 
     def test_invalid_trigger_node(self):

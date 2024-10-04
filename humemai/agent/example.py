@@ -1,10 +1,10 @@
 """An example agent."""
 
 import random
-
+from datetime import datetime
 import spacy
 from dateutil import parser
-from rdflib import Namespace, URIRef
+from rdflib import Namespace, URIRef, Literal, XSD
 
 from humemai import MemorySystem
 
@@ -96,8 +96,17 @@ class Agent:
         """
         for triple in triples:
             subj, pred, obj = triple
+
+            qualifiers = {}
+
+            # Add location and time if available
+            if location:
+                qualifiers[humemai.location] = Literal(location)
+            if time:
+                qualifiers[humemai.currentTime] = Literal(time, datatype=XSD.dateTime)
+
             self.memory_system.memory.add_short_term_memory(
-                [(subj, pred, obj)], location, time
+                [(subj, pred, obj)], qualifiers=qualifiers
             )
 
     def evaluate_and_move_memories(self):
@@ -113,9 +122,7 @@ class Agent:
         # If there are long-term memories, randomly select a trigger node and hops
         if long_term_memories:
             random_memory = random.choice(long_term_memories)
-            trigger_node = random_memory[
-                0
-            ]  # Use the subject of the memory as the trigger node
+            trigger_node = random.choice([random_memory[0], random_memory[2]])
             hops = random.randint(1, 3)  # Random hops from 1 to 3
             print(f"\nSelected trigger node: {trigger_node} with {hops} hops")
             include_all_long_term = False
@@ -127,7 +134,7 @@ class Agent:
             print("\nNo long-term memories available. Retrieving all memories.")
 
         # Get the current working memory
-        working_memory = self.get_working_memory(
+        working_memory = self.memory_system.get_working_memory(
             trigger_node=trigger_node,
             hops=hops,
             include_all_long_term=include_all_long_term,
@@ -137,7 +144,12 @@ class Agent:
         for subj, pred, obj, qualifiers in working_memory.iterate_memories(
             "short_term"
         ):
-            memory_id = qualifiers.get(str(humemai.memoryID))
+            memory_id = qualifiers.get(humemai.memoryID)
+
+            # Check if memory_id exists
+            if memory_id is None:
+                print(f"Skipping memory with no memoryID: {subj}, {pred}, {obj}")
+                continue  # Skip memories without a memoryID
 
             # Randomly decide the memory type
             memory_type = random.choice(["episodic", "semantic"])
@@ -184,29 +196,56 @@ class Agent:
         """
         Move the specified short-term memory to long-term memory.
         """
-        self.memory_system.move_short_term_to_long_term(
-            memory_id, memory_type, emotion, strength, derivedFrom, event
-        )
+        # Retrieve the memory to modify
+        memory = self.memory_system.memory.get_memory_by_id(Literal(memory_id, datatype=XSD.integer))
 
-    def clear_short_term_memories(self):
-        """
-        Clear all remaining short-term memories.
-        """
-        self.memory_system.clear_short_term_memories()
+        # If it's an episodic memory, we need to ensure 'currentTime' is removed and 'eventTime' is added
+        if memory_type == "episodic":
+            qualifiers = memory["qualifiers"]
 
-    def get_working_memory(
-        self,
-        trigger_node: URIRef = None,
-        hops: int = 1,
-        include_all_long_term: bool = False,
-    ):
-        """
-        Retrieve the working memory, which includes short-term and relevant long-term
-        memories.
-        """
-        return self.memory_system.get_working_memory(
-            trigger_node, hops, include_all_long_term
-        )
+            # Remove currentTime, which is not allowed in episodic memories
+            if humemai.currentTime in qualifiers:
+                del qualifiers[humemai.currentTime]
+
+            # Add the required eventTime qualifier
+            qualifiers[humemai.eventTime] = Literal(datetime.now().isoformat(), datatype=XSD.dateTime)
+
+            # Optionally add emotion and event if provided
+            if emotion:
+                qualifiers[humemai.emotion] = Literal(emotion)
+            if event:
+                qualifiers[humemai.event] = Literal(event)
+
+            # Move to long-term episodic memory
+            self.memory_system.memory.add_episodic_memory(
+                [(memory["subject"], memory["predicate"], memory["object"])], qualifiers
+            )
+
+        elif memory_type == "semantic":
+            qualifiers = memory["qualifiers"]
+
+            # Remove disallowed qualifiers for semantic memories
+            disallowed_qualifiers = [humemai.location, humemai.event, humemai.emotion, humemai.currentTime]
+            for disallowed in disallowed_qualifiers:
+                if disallowed in qualifiers:
+                    del qualifiers[disallowed]
+
+            # Add knownSince for semantic memories
+            qualifiers[humemai.knownSince] = Literal(datetime.now().isoformat(), datatype=XSD.dateTime)
+
+            # Optionally add strength and derivedFrom
+            if strength is not None:
+                qualifiers[humemai.strength] = Literal(strength, datatype=XSD.integer)
+            if derivedFrom:
+                qualifiers[humemai.derivedFrom] = Literal(derivedFrom)
+
+            # Move to long-term semantic memory
+            self.memory_system.memory.add_semantic_memory(
+                [(memory["subject"], memory["predicate"], memory["object"])], qualifiers
+            )
+
+        # Remove the original short-term memory
+        self.memory_system.memory.delete_memory(Literal(memory_id, datatype=XSD.integer))
 
     def print_memory(self):
         """
@@ -214,3 +253,9 @@ class Agent:
         """
         print("\nMemory System:")
         print(self.memory_system.memory)
+
+    def clear_short_term_memories(self):
+        """
+        Clear all remaining short-term memories.
+        """
+        self.memory_system.clear_short_term_memories()
