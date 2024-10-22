@@ -19,7 +19,7 @@ def wait_for_fuseki(host: str = "http://localhost:3030", timeout: int = 30) -> N
                 return
         except requests.exceptions.ConnectionError:
             pass
-        time.sleep(1)
+        time.sleep(SECONDS_TO_WAIT)
     raise TimeoutError("Fuseki server did not become ready in time.")
 
 
