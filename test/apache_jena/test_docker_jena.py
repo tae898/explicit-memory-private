@@ -2,6 +2,7 @@
 
 import unittest
 import os
+import time
 import docker
 import requests
 from SPARQLWrapper import SPARQLWrapper, POST, JSON, TURTLE
@@ -187,7 +188,7 @@ class TestMemory(unittest.TestCase):
         print("All triples have been deleted from the database.")
 
         # Set up the SPARQL Update endpoint for the 'foo' dataset
-        sparql_endpoint = "http://localhost:3030/ds/data"
+        sparql_endpoint = "http://localhost:3030/db/data"
 
         # Set the headers for the request (important for content type Turtle)
         headers = {"Content-Type": "text/turtle"}
@@ -205,7 +206,7 @@ class TestMemory(unittest.TestCase):
         if response.status_code == 200:
             print("Turtle file imported successfully!")
         else:
-            print(
+            raise Exception(
                 f"Failed to import Turtle file. Status code: {response.status_code}, Response: {response.text}"
             )
 
