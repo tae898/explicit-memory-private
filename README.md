@@ -4,13 +4,10 @@
 [![PyPI
 version](https://badge.fury.io/py/humemai.svg)](https://badge.fury.io/py/humemai)
 
-This repo hosts a package `humemai`, a human-like memory systems that are modeled with
-knowledge knoweldge graphs (KGs). At the moment they are nothing but a Python list of
-RDF quadruples, but soon it'll be a better object type so that they can be compatible
-with graph databases, e.g., RDFLib, GraphDB, Neo4j, etc. Making it compatible with
-RDFLib is top priority and it'll come with v2. There have been both [academic
-papers](#list-of-academic-papers-that-use-humemai) and
-[applications](#list-of-applications-that-use-humemai) that have used this package.
+![](./figures/humemai-diagram.png)
+
+This repo hosts a package `humemai`, a human-like memory system, modeled with knowledge
+knoweldge graphs (KGs).
 
 ## Installation
 
@@ -18,16 +15,16 @@ papers](#list-of-academic-papers-that-use-humemai) and
 pip install humemai
 ```
 
-python>=3.8
+python>=3.10
 
-## List of academic papers that use HumemAI
+<!-- ## List of academic papers that use HumemAI
 
 - ["A Machine With Human-Like Memory Systems"](https://arxiv.org/abs/2204.01611)
 - ["A Machine with Short-Term, Episodic, and Semantic Memory
   Systems"](https://arxiv.org/abs/2212.02098)
 - ["Leveraging Knowledge Graph-Based Human-Like Memory Systems to Solve Partially Observable Markov Decision Processes"](https://arxiv.org/abs/2408.05861)
 
-## List of applications that use HumemAI
+## List of applications that use HumemAI -->
 
 ## pdoc documentation
 
