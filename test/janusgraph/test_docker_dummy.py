@@ -18,10 +18,16 @@ from humemai.janusgraph.utils.docker import (
 )
 
 
+# nest_asyncio is a library that allows the use of nested event loops, which can be
+# necessary in environments like Jupyter notebooks where an event loop might already be
+# running. It helps prevent errors when trying to run an asynchronous function while
+# another loop is active.
+
+
 class TestDockerRunning(unittest.TestCase):
     def setUp(self) -> None:
         start_containers(
-            cassandra_container_name="foo", janusgraph_container_name="bar"
+            cassandra_container_name="foo", janusgraph_container_name="bar", warmup_seconds=20
         )
 
     def test_add_dummy_data(self) -> None:
@@ -182,4 +188,6 @@ class TestDockerRunning(unittest.TestCase):
 
     def tearDown(self) -> None:
         stop_containers(cassandra_container_name="foo", janusgraph_container_name="bar")
-        remove_containers(cassandra_container_name="foo", janusgraph_container_name="bar")
+        remove_containers(
+            cassandra_container_name="foo", janusgraph_container_name="bar"
+        )
