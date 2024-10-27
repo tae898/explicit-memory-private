@@ -17,7 +17,7 @@ class TestHumemaiWithMemory(unittest.TestCase):
     def setUpClass(cls) -> None:
         """Start containers, connect to Gremlin, and initialize Humemai instance."""
         cls.humemai = Humemai()
-        cls.humemai.start_containers(warmup_seconds=10)
+        cls.humemai.start_containers(warmup_seconds=20)
         cls.humemai.connect()
         cls.humemai.remove_all()
         cls.humemai.reset_memory_id()

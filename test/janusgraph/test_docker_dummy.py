@@ -21,7 +21,7 @@ class TestDockerRunning(unittest.TestCase):
         start_containers(
             cassandra_container_name="foo",
             janusgraph_container_name="bar",
-            warmup_seconds=10,
+            warmup_seconds=20,
         )
         self.graph = Graph()
         self.connection = DriverRemoteConnection(
