@@ -19,6 +19,17 @@ pip install humemai
 
 Supports python>=3.10
 
+## RDF-based or JanusGraph-Cassandra-based HumemAI
+
+### RDF-based: [`./humemai/rdflib`](./humemai/rdflib)
+
+I stopped working on this. It's very likely that I'll transition to a property graph
+based method, e.g., JanusGraph-Cassandra
+
+### JanusGraph-Cassandra-based: [`./humemai/janusgraph`](./humemai/janusgraph)
+
+WIP!!
+
 ## Updates
 
 ### 24-Oct-2024
