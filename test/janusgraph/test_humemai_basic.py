@@ -182,3 +182,4 @@ class TestHumemaiWithMemory(unittest.TestCase):
         # Verify memory deletion
         with self.assertRaises(Exception):
             self.humemai.read_memory(memory.memory_id)
+

@@ -56,7 +56,6 @@ class Memory:
             f"  Head(label='{self.head_label}', properties={self.head_properties}),\n"
             f"  Tail(label='{self.tail_label}', properties={self.tail_properties}),\n"
             f"  Edge(label='{self.edge_label}', properties={self.edge_properties})\n"
-            f"  Memory ID: {self.memory_id}\n"
             f")"
         )
 
@@ -146,7 +145,6 @@ class ShortMemory(Memory):
             f"  Head(label='{self.head_label}', properties={self.head_properties}),\n"
             f"  Tail(label='{self.tail_label}', properties={self.tail_properties}),\n"
             f"  Edge(label='{self.edge_label}', properties={self.edge_properties}),\n"
-            f"  Memory ID: {self.memory_id}\n"
             f")"
         )
 
@@ -187,6 +185,12 @@ class LongMemory(Memory):
         if edge_properties is None:
             edge_properties = {}
 
+        if "num_recalled" not in head_properties:
+            head_properties["num_recalled"] = 0
+
+        if "num_recalled" not in tail_properties:
+            tail_properties["num_recalled"] = 0
+
         if "num_recalled" not in edge_properties:
             edge_properties["num_recalled"] = 0
 
@@ -213,7 +217,6 @@ class LongMemory(Memory):
             f"  Head(label='{self.head_label}', properties={self.head_properties}),\n"
             f"  Tail(label='{self.tail_label}', properties={self.tail_properties}),\n"
             f"  Edge(label='{self.edge_label}', properties={self.edge_properties}),\n"
-            f"  Memory ID: {self.memory_id}\n"
             f")"
         )
 
@@ -286,7 +289,6 @@ class EpisodicMemory(LongMemory):
             f"  Head(label='{self.head_label}', properties={self.head_properties}),\n"
             f"  Tail(label='{self.tail_label}', properties={self.tail_properties}),\n"
             f"  Edge(label='{self.edge_label}', properties={self.edge_properties}),\n"
-            f"  Memory ID: {self.memory_id}\n"
             f")"
         )
 
@@ -355,6 +357,5 @@ class SemanticMemory(LongMemory):
             f"  Head(label='{self.head_label}', properties={self.head_properties}),\n"
             f"  Tail(label='{self.tail_label}', properties={self.tail_properties}),\n"
             f"  Edge(label='{self.edge_label}', properties={self.edge_properties}),\n"
-            f"  Memory ID: {self.memory_id}\n"
             f")"
         )

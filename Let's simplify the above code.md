@@ -1,7 +1,3 @@
-1. Implement finding memories based on some condition.
-
-   1. Return a list of Memory objects
-
 1. Working memory is defined as all short-term memories + partial long-term memory
 
    1. This method takes three arguments: `trigger_node`, `hops` and,
@@ -22,3 +18,5 @@
 1. Implement "event" clustering.
 
    1. We can do something like Leiden algorithm to find communities to assign an event.
+
+1. visualization

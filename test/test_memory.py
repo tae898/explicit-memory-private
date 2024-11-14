@@ -143,8 +143,12 @@ class TestLongMemory(unittest.TestCase):
         self.assertEqual(long_memory.tail_label, "Event")
         self.assertEqual(long_memory.edge_label, "remembers")
         self.assertEqual(long_memory.memory_id, 201)
-        self.assertEqual(long_memory.head_properties, {"name": "Alice"})
-        self.assertEqual(long_memory.tail_properties, {"event_name": "Conference"})
+        self.assertEqual(
+            long_memory.head_properties, {"name": "Alice", "num_recalled": 0}
+        )
+        self.assertEqual(
+            long_memory.tail_properties, {"event_name": "Conference", "num_recalled": 0}
+        )
 
         # Ensure `recalled` is in edge_properties and set to 0
         self.assertIn("num_recalled", long_memory.edge_properties)
@@ -164,8 +168,14 @@ class TestLongMemory(unittest.TestCase):
         )
 
         expected_dict = {
-            "head": {"label": "Person", "properties": {"name": "Alice"}},
-            "tail": {"label": "Event", "properties": {"event_name": "Workshop"}},
+            "head": {
+                "label": "Person",
+                "properties": {"name": "Alice", "num_recalled": 0},
+            },
+            "tail": {
+                "label": "Event",
+                "properties": {"event_name": "Workshop", "num_recalled": 0},
+            },
             "edge": {"label": "remembers", "properties": {"num_recalled": 0}},
             "memory_id": 202,
         }
