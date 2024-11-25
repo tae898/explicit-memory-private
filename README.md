@@ -19,10 +19,6 @@ pip install humemai
 
 Supports python>=3.10
 
-## How it works
-
-The 
-
 ## Example
 
 ## Work in progress
