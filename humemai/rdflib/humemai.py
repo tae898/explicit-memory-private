@@ -15,7 +15,7 @@ from rdflib.namespace import RDF, XSD
 
 # Configure logging
 logging.basicConfig(level=logging.DEBUG)
-logger = logging.getLogger("humemai.rdflib.humemai")
+logger = logging.getLogger(__name__)
 
 # Define custom namespace for humemai ontology
 humemai = Namespace("https://humem.ai/ontology#")

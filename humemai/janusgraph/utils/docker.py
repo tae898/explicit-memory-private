@@ -3,6 +3,7 @@
 import os
 import logging
 import time
+import subprocess
 import docker
 import nest_asyncio
 from gremlin_python.driver.serializer import GraphSONSerializersV3d0
@@ -13,7 +14,7 @@ from gremlin_python.process.graph_traversal import GraphTraversalSource
 
 # Configure logging
 logging.basicConfig(level=logging.DEBUG)
-logger = logging.getLogger("humemai.janusgraph.docker")
+logger = logging.getLogger(__name__)
 
 
 def start_containers(
@@ -212,3 +213,47 @@ def remove_containers(
     # Remove Cassandra and JanusGraph containers
     remove_container(cassandra_container_name)
     remove_container(janusgraph_container_name)
+
+
+def copy_file_from_docker(
+    container_name: str, source_path: str, destination_path: str
+) -> None:
+    """Copy a file from a Docker container to the host machine using docker cp.
+
+    Args:
+        container_name (str): Name or ID of the container.
+        source_path (str): Path to the file inside the container.
+        destination_path (str): Destination path on the host machine.
+    """
+    try:
+        # Build and run the docker cp command
+        command = ["docker", "cp", f"{container_name}:{source_path}", destination_path]
+        subprocess.run(command, check=True, capture_output=True, text=True)
+
+        logger.debug(f"File copied successfully to {destination_path}")
+    except subprocess.CalledProcessError as e:
+        logger.error(f"Error during file copy: {e.stderr}")
+    except Exception as e:
+        logger.error(f"An unexpected error occurred: {e}")
+
+
+def copy_file_to_docker(
+    container_name: str, source_path: str, destination_path: str
+) -> None:
+    """Copy a file from the host machine to a Docker container using docker cp.
+
+    Args:
+        container_name (str): Name or ID of the container.
+        source_path (str): Path to the file on the host machine.
+        destination_path (str): Destination path inside the container.
+    """
+    try:
+        # Build and run the docker cp command
+        command = ["docker", "cp", source_path, f"{container_name}:{destination_path}"]
+        subprocess.run(command, check=True, capture_output=True, text=True)
+
+        logger.debug(f"File copied successfully to {container_name}:{destination_path}")
+    except subprocess.CalledProcessError as e:
+        logger.error(f"Error during file copy: {e.stderr}")
+    except Exception as e:
+        logger.error(f"An unexpected error occurred: {e}")

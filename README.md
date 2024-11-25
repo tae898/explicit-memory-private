@@ -4,10 +4,21 @@
 [![PyPI
 version](https://badge.fury.io/py/humemai.svg)](https://badge.fury.io/py/humemai)
 
-![](./figures/humemai-diagram.png)
+<div style="text-align: center;">
+    <img src="./figures/humemai-with-text-below.png" alt="Image" style="width: 50%; max-width: 600px;">
+</div>
 
-This repo hosts a package `humemai`, a human-like memory system, modeled with knowledge
-knoweldge graphs (KGs).
+- Built on a cognitive architecture
+  - Functions as the brain 🧠 of your own agent
+  - It has human-like short-term and long-term memory
+- The memory is represented as a knowledge graph
+  - A graph database (JanusGraph + Cassandra) is used for persistence and fastgraph
+    traversal
+  - The user does not have to know graph query languages, e.g., Gremlin, since HumemAI
+    handles read from / write to the database
+- The interface of HumemAI is natural language, just like a chatbot.
+  - This requires the Text2Graph and Graph2Text modules, which are part of HumemAI
+- Everything is open-sourced, including the database
 
 ## Installation
 
@@ -19,20 +30,44 @@ pip install humemai
 
 Supports python>=3.10
 
+## Text2Graph and Graph2Text
+
+These two modules are critical in HumemAI. At the moment, they are achieved with [LLM
+prompting](./humemai/prompt/), which is not ideal. They'll be replaced with Transformer
+and GNN based neural networks.
+
 ## Example
+
+- [`example-janus-agent.ipynb`](./examples/janus-graph-parse-text/example-janus-agent.ipynb):
+  This Jupyter Notebook reads the Harry Potter book paragraph by paragraph and turns it
+  into a knowledge graph. Text2Graph and Graph2Text are achieved with LLM prompting.
+- More to come ...
+
+## Visualizaing Graph
+
+Use [`JanusGraph-Visualizer`](https://github.com/JanusGraph/janusgraph-visualizer) to
+visualize the graph.
+
+Run below:
+
+```sh
+docker run --rm -d -p 3000:3000 -p 3001:3001 --name=janusgraph-visualizer --network=host janusgraph/janusgraph-visualizer:latest
+```
+
+And open `http://localhost:3001/` on your web browser
 
 ## Work in progress
 
 Currently this is a one-man job. [Click here to see the current
 progress](https://github.com/orgs/humemai/projects/2/).
 
-## List of academic papers that use HumemAI
+<!-- ## List of academic papers that use HumemAI
 
 - ["A Machine With Human-Like Memory Systems"](https://arxiv.org/abs/2204.01611)
 - ["A Machine with Short-Term, Episodic, and Semantic Memory
   Systems"](https://arxiv.org/abs/2212.02098)
 
-## List of applications that use HumemAI
+## List of applications that use HumemAI -->
 
 ## pdoc documentation
 

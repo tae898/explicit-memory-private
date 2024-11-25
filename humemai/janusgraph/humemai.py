@@ -38,14 +38,16 @@ from humemai.janusgraph.utils.docker import (
     start_containers,
     stop_containers,
     remove_containers,
+    copy_file_from_docker,
+    copy_file_to_docker,
 )
 
-from humemai.utils import is_iso8601_datetime
+from humemai.utils import is_iso8601_datetime, write_json, read_json
 
 
 # Configure logging
 logging.basicConfig(level=logging.DEBUG)
-logger = logging.getLogger("humemai.janusgraph.Humemai")
+logger = logging.getLogger(__name__)
 
 
 class Humemai:
@@ -532,9 +534,9 @@ class Humemai:
             tuple: A tuple of short-term vertices, long-term vertices, short-term edges,
                 and long-term edges.
         """
-        if len(short_term_vertices) == 0 or len(short_term_edges) == 0:
-            self.logger.error("Short-term vertices and edges must not be empty.")
-            raise ValueError("Short-term vertices and edges must not be empty.")
+        if len(short_term_vertices) == 0:
+            self.logger.error("Short-term vertices and must not be empty.")
+            raise ValueError("Short-term vertices and must not be empty.")
         if include_all_long_term:
             long_term_vertices = self.get_all_long_term_vertices()
             long_term_edges = self.get_all_long_term_edges()
@@ -715,3 +717,27 @@ class Humemai:
             list of Vertex: List of vertices with the given label.
         """
         return find_vertex_by_label(self.g, label)
+
+    def save_db_as_json(self, json_name: str = "db.json") -> None:
+        """Read the database as a JSON file.
+
+        Args:
+            json_name (str): The name of the JSON file.
+        """
+        self.g.io(json_name).write().iterate()
+
+        copy_file_from_docker(
+            self.janusgraph_container_name, f"/opt/janusgraph/{json_name}", json_name
+        )
+
+    def load_db_from_json(self, json_name: str = "db.json") -> None:
+        """Write a JSON file to the database.
+
+        Args:
+            json_name (str): The name of the JSON file.
+        """
+        copy_file_to_docker(
+            self.janusgraph_container_name, json_name, f"/opt/janusgraph/{json_name}"
+        )
+
+        self.g.io(json_name).read().iterate()

@@ -149,5 +149,5 @@ DEBUG/
 _docs/
 
 # Cassndra
-
+configs
 cassandra_data

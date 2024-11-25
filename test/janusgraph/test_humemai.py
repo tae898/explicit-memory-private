@@ -392,7 +392,7 @@ class TestHumemai(unittest.TestCase):
         self.humemai.remove_all_data()
         vertex_d = self.humemai.write_short_term_vertex("D", {"type": "Person"})
         vertex_a = self.humemai.write_short_term_vertex(
-            "A", {"type": "Organization", "location": "USA"}
+            "A", {"type": "Organization"}
         )
         vertex_b = self.humemai.write_short_term_vertex("B", {"type": "Organization"})
         vertex_f = self.humemai.write_short_term_vertex(
