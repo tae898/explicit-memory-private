@@ -22,7 +22,8 @@ version](https://badge.fury.io/py/humemai.svg)](https://badge.fury.io/py/humemai
 
 ## Installation
 
-The `humemai` python package can already be found in [the PyPI server](https://pypi.org/project/humemai/)
+The `humemai` python package can already be found in [the PyPI
+server](https://pypi.org/project/humemai/)
 
 ```sh
 pip install humemai
