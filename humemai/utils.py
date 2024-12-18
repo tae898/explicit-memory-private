@@ -124,7 +124,7 @@ def chunk_by_tokens(
     """
     Reads a text file and returns a list of string chunks, each about `num_tokens` tokens long.
     Tokens are approximated as: tokens = words * num_tokens_per_word.
-    
+
     Steps:
     1. Read the entire text file.
     2. Split the text into words by whitespace.
@@ -152,7 +152,7 @@ def chunk_by_tokens(
 
     chunks = []
     for i in range(0, len(words), words_per_chunk):
-        chunk_words = words[i:i+words_per_chunk]
+        chunk_words = words[i : i + words_per_chunk]
         # Join words into a single string for the chunk
         chunk_str = " ".join(chunk_words)
         chunks.append(chunk_str)
