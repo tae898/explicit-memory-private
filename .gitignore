@@ -151,3 +151,6 @@ _docs/
 # Cassndra
 configs
 cassandra_data
+
+# Wikidata
+examples/wikidata/data
