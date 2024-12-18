@@ -4,7 +4,6 @@ import json
 import os
 from datetime import datetime
 import logging
-import docker
 import nest_asyncio
 from gremlin_python.process.graph_traversal import __
 from gremlin_python.structure.graph import Graph, Vertex, Edge
@@ -14,11 +13,9 @@ from gremlin_python.process.graph_traversal import GraphTraversalSource
 from gremlin_python.process.traversal import P, T, Direction, TextP
 from gremlin_python.driver.serializer import GraphSONSerializersV3d0
 from humemai.janusgraph.utils.docker import (
-    start_containers,
-    stop_containers,
-    remove_containers,
-    copy_file_from_docker,
-    copy_file_to_docker,
+    start_docker_compose,
+    stop_docker_compose,
+    remove_docker_compose,
 )
 
 from humemai.utils import is_iso8601_datetime, write_json, read_json
@@ -32,73 +29,45 @@ logger = logging.getLogger(__name__)
 class Humemai:
     def __init__(
         self,
-        janusgraph_container_name="janusgraph",
-        gremlin_server_url="ws://localhost:8182/gremlin",
-        gremlin_traversal_source="g",
-        configs_dir="./configs",
-        janusgraph_config="janusgraph.properties",
-        gremlin_server_config="gremlin-server.yaml",
+        compose_file_path: str = "./humemai/janusgraph/docker-compose-cql-es.yml",
+        warmup_seconds: int = 30,
     ) -> None:
         """
         Initialize a Humemai object for connecting to JanusGraph and in-memory graph.
 
-        Currently a persistent database, e.g., Cassandra is not supported. When we are
-        production-ready, we will add support for Cassandra.
+        Cassandra and ElasticSearch containers will be started if not already running.
 
         Args:
-            janusgraph_container_name (str): Name of the JanusGraph container.
-            gremlin_server_url (str): URL for connecting to the Gremlin server.
-            gremlin_traversal_source (str): Traversal source name for Gremlin.
-            configs_dir (str): Directory containing JanusGraph and Gremlin Server
-            configuration files.
-            janusgraph_config (str): JanusGraph configuration file.
-            gremlin_server_config (str): Gremlin Server configuration file.
+            compose_file_path (str): Path to the Docker Compose file. Default is
+                "./humemai/janusgraph/docker-compose-cql-es.yml".
         """
+        self.compose_file_path = compose_file_path
+        start_docker_compose(self.compose_file_path, warmup_seconds)
 
-        self.janusgraph_container_name = janusgraph_container_name
-        self.gremlin_server_url = gremlin_server_url
-        self.gremlin_traversal_source = gremlin_traversal_source
-        self.configs_dir = configs_dir
-        self.janusgraph_config = janusgraph_config
-        self.gremlin_server_config = gremlin_server_config
-
-        # Initialize Docker client
-        self.client = docker.from_env()
-
-        # Set up Gremlin connection and traversal source (to be initialized in connect
-        # method)
         self.connection = None
         self.g = None
 
         # Logging configuration
         self.logger = logger
 
-    def start_containers(self, warmup_seconds: int = 10) -> None:
-        """Start the JanusGraph container with optional warmup time.
+        # janusgraph_container_name="janusgraph",
+        # gremlin_server_url="ws://localhost:8182/gremlin",
+        # gremlin_traversal_source="g",
+        # configs_dir="./configs",
+        # janusgraph_config="janusgraph.properties",
+        # gremlin_server_config="gremlin-server.yaml",
 
-        Args:
-            warmup_seconds (int): Number of seconds to wait after starting the
-                containers
+    def stop_docker_compose(self) -> None:
         """
-        start_containers(
-            configs_dir=self.configs_dir,
-            janusgraph_config=self.janusgraph_config,
-            gremlin_server_config=self.gremlin_server_config,
-            janusgraph_container_name=self.janusgraph_container_name,
-            warmup_seconds=warmup_seconds,
-        )
+        Stop the Docker Compose services specified in the given compose file.
+        """
+        stop_docker_compose(self.compose_file_path)
 
-    def stop_containers(self) -> None:
-        """Stop the JanusGraph container."""
-        stop_containers(
-            janusgraph_container_name=self.janusgraph_container_name,
-        )
-
-    def remove_containers(self) -> None:
-        """Remove the JanusGraph container."""
-        remove_containers(
-            janusgraph_container_name=self.janusgraph_container_name,
-        )
+    def remove_docker_compose(self) -> None:
+        """
+        Remove the containers listed in the docker-compose file.
+        """
+        remove_docker_compose(self.compose_file_path)
 
     def connect(self) -> None:
         """Establish a connection to the Gremlin server."""
@@ -110,8 +79,8 @@ class Humemai:
 
                 # Initialize Gremlin connection using GraphSON 3.0 serializer
                 self.connection = DriverRemoteConnection(
-                    self.gremlin_server_url,
-                    self.gremlin_traversal_source,
+                    "ws://localhost:8182/gremlin",
+                    "g",
                     message_serializer=GraphSONSerializersV3d0(),
                 )
                 # Set up the traversal source

@@ -10,6 +10,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      # Checkout the code
       - uses: actions/checkout@v4
 
       # Install Docker
@@ -21,6 +22,14 @@ jobs:
         run: |
           docker version
           docker info
+
+      # Install docker-compose
+      - name: Install docker-compose
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y docker-compose
+      - name: Verify docker-compose installation
+        run: docker-compose version
 
       # Set up Python environment
       - name: Set up Python

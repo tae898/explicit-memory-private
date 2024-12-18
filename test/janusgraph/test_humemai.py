@@ -13,7 +13,6 @@ class TestHumemai(unittest.TestCase):
     def setUpClass(cls) -> None:
         """Start containers, connect to Gremlin, and initialize Humemai instance."""
         cls.humemai = Humemai()
-        cls.humemai.start_containers(warmup_seconds=30)
         cls.humemai.connect()
         cls.humemai.remove_all_data()
 
@@ -21,8 +20,8 @@ class TestHumemai(unittest.TestCase):
     def tearDownClass(cls) -> None:
         """Disconnect and stop containers after all tests."""
         cls.humemai.disconnect()
-        cls.humemai.stop_containers()
-        cls.humemai.remove_containers()
+        cls.humemai.stop_docker_compose()
+        cls.humemai.remove_docker_compose()
 
     def test_write_short_term(self):
         """Test writing a short-term vertex and index."""

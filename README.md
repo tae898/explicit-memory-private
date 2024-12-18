@@ -54,16 +54,9 @@ and GNN based neural networks.
 
 ## Visualizaing Graph
 
-Use [`JanusGraph-Visualizer`](https://github.com/JanusGraph/janusgraph-visualizer) to
-visualize the graph.
-
-Run below:
-
-```sh
-docker run --rm -d -p 3000:3000 -p 3001:3001 --name=janusgraph-visualizer --network=host janusgraph/janusgraph-visualizer:latest
-```
-
-And open `http://localhost:3001/` on your web browser
+HumemAI runs four docker containers with docker-compose and one of them is visualizer.
+Open your browser and type `http://localhost:3001/`. Rename "host" to `jce-janusgraph`
+and query the graph.
 
 ## Work in progress
 
