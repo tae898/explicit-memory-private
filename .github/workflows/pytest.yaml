@@ -10,8 +10,12 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # Checkout the code
-      - uses: actions/checkout@v4
+      # Checkout the code without submodules
+      - name: Checkout repository without submodules
+        run: |
+          git clone --depth 1 https://github.com/humemai/humemai.git humemai
+          cd humemai
+          git checkout ${{ github.ref_name }}
 
       # Install Docker
       - name: Set up Docker
@@ -42,15 +46,17 @@ jobs:
       - name: Upgrade pip and build dependencies
         run: |
           python -m pip install --upgrade pip setuptools wheel pytest
-          
-      # Install your package (replace humemai with your package name if necessary)
-      - name: Install humemai from current branch
+
+      # Install the package from the cloned repository
+      - name: Install humemai package
         run: |
-          python -m pip install git+https://github.com/humemai/humemai@${{ github.ref_name }}
-          
+          cd humemai
+          python -m pip install .
+
       # Run pytest
       - name: Run pytest
         env:
           DOCKER_BUILDKIT: 1
         run: |
+          cd humemai
           python -m pytest .
