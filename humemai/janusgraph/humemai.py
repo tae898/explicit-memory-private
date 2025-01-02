@@ -34,27 +34,53 @@ class Humemai:
         self,
         compose_file_path: str = None,
         warmup_seconds: int = 30,
+        container_prefix: str = "jce",
+        janusgraph_public_port: int = 8182,
+        cassandra_port_9042: int = 9042,
+        cassandra_port_9160: int = 9160,
+        elasticsearch_public_port: int = 9200,
+        visualizer_port_1: int = 3000,
+        visualizer_port_2: int = 3001,
     ) -> None:
         """
         Initialize a Humemai object for connecting to JanusGraph and in-memory graph.
 
-        Cassandra and ElasticSearch containers will be started if not already running.
-
         Args:
             compose_file_path (str): Path to the Docker Compose file. Default is None,
                 in which case the path is resolved relative to the script's directory.
+            warmup_seconds (int): Seconds to wait after starting containers.
+            container_prefix (str): Prefix for Docker container names.
+            janusgraph_public_port (int): Host port for JanusGraph (default 8182).
+            cassandra_port_9042 (int): Host port for Cassandra's 9042 (default 9042).
+            cassandra_port_9160 (int): Host port for Cassandra's 9160 (default 9160).
+            elasticsearch_public_port (int): Host port for Elasticsearch (default 9200).
+            visualizer_port_1 (int): Host port for JanusGraph Visualizer (default 3000).
+            visualizer_port_2 (int): Host port for JanusGraph Visualizer admin (default 3001).
         """
-        # Resolve default path relative to the script's directory
+        # Logging configuration
+        self.logger = logger
+
+        # Resolve default path relative to this script's directory
         if compose_file_path is None:
-            current_dir = Path(__file__).parent  # Get directory of this script
+            current_dir = Path(__file__).parent  # Directory of this script
             compose_file_path = current_dir / "docker-compose-cql-es.yml"
 
         # Convert to absolute path to avoid issues in production
         self.compose_file_path = os.path.abspath(compose_file_path)
 
-        # Logging configuration
-        self.logger = logger
+        # Set environment variables for Docker Compose variable substitution
+        os.environ["CONTAINER_PREFIX"] = container_prefix
+        os.environ["JANUSGRAPH_PUBLIC_PORT"] = str(janusgraph_public_port)
+        os.environ["CASSANDRA_PORT_9042"] = str(cassandra_port_9042)
+        os.environ["CASSANDRA_PORT_9160"] = str(cassandra_port_9160)
+        os.environ["ELASTICSEARCH_PUBLIC_PORT"] = str(elasticsearch_public_port)
+        os.environ["VISUALIZER_PORT_1"] = str(visualizer_port_1)
+        os.environ["VISUALIZER_PORT_2"] = str(visualizer_port_2)
 
+        # Store project name
+        self.project_name = container_prefix
+
+        # Start containers
         self.start_docker_compose(warmup_seconds)
 
     def start_docker_compose(self, warmup_seconds: int) -> None:
@@ -62,43 +88,75 @@ class Humemai:
         Start the Docker Compose services specified in the given compose file.
 
         Args:
-            compose_file_path (str): The path to the docker-compose file.
             warmup_seconds (int): Number of seconds to wait for the containers to warm up.
-
         """
-        start_docker_compose(self.compose_file_path, warmup_seconds)
-        self.connection = None
-        self.g = None
+        try:
+            start_docker_compose(
+                compose_file_path=self.compose_file_path,
+                project_name=self.project_name,
+                warmup_seconds=warmup_seconds,
+            )
+            # Reset connections or graph instances if necessary
+            self.connection = None
+            self.g = None
+        except Exception as e:
+            logger.error(f"Failed to start Docker Compose services: {e}")
+            raise e
 
     def stop_docker_compose(self) -> None:
         """
         Stop the Docker Compose services specified in the given compose file.
         """
-        stop_docker_compose(self.compose_file_path)
+        try:
+            stop_docker_compose(
+                compose_file_path=self.compose_file_path, project_name=self.project_name
+            )
+        except Exception as e:
+            logger.error(f"Failed to stop Docker Compose services: {e}")
+            raise e
 
     def remove_docker_compose(self) -> None:
         """
-        Remove the containers listed in the docker-compose file.
+        Remove the Docker Compose services specified in the given compose file along with orphans.
         """
-        remove_docker_compose(self.compose_file_path)
+        try:
+            remove_docker_compose(
+                compose_file_path=self.compose_file_path, project_name=self.project_name
+            )
+        except Exception as e:
+            logger.error(f"Failed to remove Docker Compose services: {e}")
+            raise e
 
     def connect(self) -> None:
         """Establish a connection to the Gremlin server."""
         try:
-            if not self.connection:
-                # Apply nest_asyncio to allow nested event loops (useful in Jupyter
-                # notebooks)
+            if self.connection is None:
+                self.logger.debug(
+                    "Attempting to establish a new connection to the Gremlin server."
+                )
+
+                # Apply nest_asyncio to allow nested event loops (useful in Jupyter notebooks)
                 nest_asyncio.apply()
+
+                # Construct the Gremlin server URL dynamically based on environment variables
+                gremlin_host = "localhost"  # Assuming connection from host machine
+                gremlin_port = os.getenv("JANUSGRAPH_PUBLIC_PORT", "8182")
+                gremlin_url = f"ws://{gremlin_host}:{gremlin_port}/gremlin"
+
+                self.logger.debug(f"Gremlin server URL: {gremlin_url}")
 
                 # Initialize Gremlin connection using GraphSON 3.0 serializer
                 self.connection = DriverRemoteConnection(
-                    "ws://localhost:8182/gremlin",
+                    gremlin_url,
                     "g",
                     message_serializer=GraphSONSerializersV3d0(),
                 )
+
                 # Set up the traversal source
                 self.g = Graph().traversal().withRemote(self.connection)
-                self.logger.debug("Successfully connected to the Gremlin server.")
+
+                self.logger.info("Successfully connected to the Gremlin server.")
+
         except Exception as e:
             self.logger.error(f"Failed to connect to the Gremlin server: {e}")
             raise
