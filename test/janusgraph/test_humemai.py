@@ -12,7 +12,16 @@ class TestHumemai(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
         """Start containers, connect to Gremlin, and initialize Humemai instance."""
-        cls.humemai = Humemai(warmup_seconds=120)
+        cls.humemai = Humemai(
+            warmup_seconds=120,
+            container_prefix="test",
+            janusgraph_public_port=8182 + 10,
+            cassandra_port_9042=9042 + 10,
+            cassandra_port_9160=9160 + 10,
+            elasticsearch_public_port=9200 + 10,
+            visualizer_port_1=3000 + 10,
+            visualizer_port_2=3001 + 10,
+        )
         cls.humemai.connect()
         cls.humemai.remove_all_data()
 

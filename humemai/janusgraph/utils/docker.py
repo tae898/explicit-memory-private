@@ -17,107 +17,141 @@ logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
 
-def start_docker_compose(compose_file_path: str, warmup_seconds: int = 30) -> None:
+def start_docker_compose(
+    compose_file_path: str, project_name: str, warmup_seconds: int = 30
+) -> None:
     """
     Starts the Docker Compose services specified in the given compose file.
 
     Args:
         compose_file_path (str): The path to the docker-compose file.
+        project_name (str): The Docker Compose project name.
         warmup_seconds (int): Number of seconds to wait for the containers to warm up.
 
     Raises:
         Exception: If an error occurs while attempting to start the services.
 
     Outputs:
-        Prints a success message and any output from the docker-compose command if
-        successful. Prints an error message if the docker-compose command fails.
+        Logs a success message and any output from the docker-compose command if
+        successful. Logs an error message if the docker-compose command fails.
     """
     try:
+        logger.debug(
+            f"Starting Docker Compose with project name '{project_name}' using file '{compose_file_path}'..."
+        )
         # Run the docker-compose command to start the services
         result = subprocess.run(
-            ["docker-compose", "-f", compose_file_path, "up", "-d"],
+            ["docker-compose", "-p", project_name, "-f", compose_file_path, "up", "-d"],
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             text=True,
             check=True,
         )
 
-        # Output the results
-        # if result.returncode == 0:
+        # Wait for containers to warm up
+        logger.debug(
+            f"Waiting for {warmup_seconds} seconds to allow containers to warm up..."
+        )
         time.sleep(warmup_seconds)
-        logger.debug("Docker Compose started successfully.")
+
+        # Log success and output
+        logger.info("Docker Compose started successfully.")
         logger.debug(result.stdout)
-        # else:
-        #     logger.error(f"Error running docker-compose: {result.stderr}")
+
+    except subprocess.CalledProcessError as e:
+        logger.error(f"Error running docker-compose up: {e.stderr}")
+        raise e
     except Exception as e:
-        logger.error(f"An error occurred: {e}")
+        logger.error(f"An unexpected error occurred while starting Docker Compose: {e}")
         raise e
 
 
-def stop_docker_compose(compose_file_path: str) -> None:
+def stop_docker_compose(compose_file_path: str, project_name: str) -> None:
     """
     Stops the Docker Compose services specified in the given compose file.
 
     Args:
         compose_file_path (str): The path to the docker-compose file.
+        project_name (str): The Docker Compose project name.
 
     Raises:
         Exception: If an error occurs while attempting to stop the services.
 
     Outputs:
-        Prints a success message and any output from the docker-compose command if
-        successful. Prints an error message if the docker-compose command fails.
+        Logs a success message and any output from the docker-compose command if
+        successful. Logs an error message if the docker-compose command fails.
     """
     try:
+        logger.debug(
+            f"Stopping Docker Compose with project name '{project_name}' using file '{compose_file_path}'..."
+        )
         # Run the docker-compose command to stop the services
         result = subprocess.run(
-            ["docker-compose", "-f", compose_file_path, "down"],
+            ["docker-compose", "-p", project_name, "-f", compose_file_path, "down"],
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             text=True,
+            check=True,
         )
 
-        # Output the results
-        if result.returncode == 0:
-            logger.debug("Docker Compose stopped successfully.")
-            logger.debug(result.stdout)
-        else:
-            logger.error(f"Error running docker-compose: {result.stderr}")
+        # Log success and output
+        logger.info("Docker Compose stopped successfully.")
+        logger.debug(result.stdout)
+
+    except subprocess.CalledProcessError as e:
+        logger.error(f"Error running docker-compose down: {e.stderr}")
+        raise e
     except Exception as e:
-        logger.error(f"An error occurred: {e}")
+        logger.error(f"An unexpected error occurred while stopping Docker Compose: {e}")
+        raise e
 
 
-def remove_docker_compose(compose_file_path: str) -> None:
+def remove_docker_compose(compose_file_path: str, project_name: str) -> None:
     """
-    Remove the containers listed in the docker-compose file.
+    Removes the Docker Compose services specified in the given compose file along with orphans.
 
     Args:
         compose_file_path (str): The path to the docker-compose file.
+        project_name (str): The Docker Compose project name.
 
     Raises:
-        Exception: If an error occurs while attempting to stop the services.
+        Exception: If an error occurs while attempting to remove the services.
 
     Outputs:
-        Prints a success message and any output from the docker-compose command if
-        successful. Prints an error message if the docker-compose command fails.
+        Logs a success message and any output from the docker-compose command if
+        successful. Logs an error message if the docker-compose command fails.
     """
     try:
-        # docker-compose -f humemai/janusgraph/docker-compose-cql-es.yml down --remove-orphans
+        logger.debug(
+            f"Removing Docker Compose with project name '{project_name}' using file '{compose_file_path}'..."
+        )
+        # Run the docker-compose command to remove the services and orphans
         result = subprocess.run(
-            ["docker-compose", "-f", compose_file_path, "down", "--remove-orphans"],
+            [
+                "docker-compose",
+                "-p",
+                project_name,
+                "-f",
+                compose_file_path,
+                "down",
+                "--remove-orphans",
+            ],
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             text=True,
+            check=True,
         )
 
-        # Output the results
-        if result.returncode == 0:
-            logger.debug("Docker Compose removed successfully.")
-            logger.debug(result.stdout)
-        else:
-            logger.error(f"Error running docker-compose: {result.stderr}")
+        # Log success and output
+        logger.info("Docker Compose removed successfully.")
+        logger.debug(result.stdout)
+
+    except subprocess.CalledProcessError as e:
+        logger.error(f"Error running docker-compose down --remove-orphans: {e.stderr}")
+        raise e
     except Exception as e:
-        logger.error(f"An error occurred: {e}")
+        logger.error(f"An unexpected error occurred while removing Docker Compose: {e}")
+        raise e
 
 
 def copy_file_from_docker(
