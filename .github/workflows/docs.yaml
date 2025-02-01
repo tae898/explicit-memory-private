@@ -57,8 +57,11 @@ jobs:
           cd humemai
           python -m pdoc -d google -o ../_docs humemai
 
-      - name: Upload Pages artifact
-        uses: actions/upload-pages-artifact@v2
+      - name: Upload Pages artifact (workaround)
+        # Using the "main" branch as a temporary workaround
+        # because the published v2 release currently depends on
+        # a deprecated version of actions/upload-artifact.
+        uses: actions/upload-pages-artifact@main
         with:
           path: "./_docs/"
 
