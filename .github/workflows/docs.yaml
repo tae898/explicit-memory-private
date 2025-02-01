@@ -7,7 +7,6 @@ on:
   push:
     branches:
       - "main"
-
   workflow_dispatch:
 
 concurrency:
@@ -49,20 +48,13 @@ jobs:
         run: |
           python -m pdoc -d google -o _docs humemai
 
-      - name: List artifacts after upload
-        run: ls -lah _docs  # DEBUGGING
+      - name: Verify built documentation
+        run: ls -lah _docs  # Optional debugging step
 
       - name: Upload documentation artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-pages-artifact@v2
         with:
-          name: documentation
           path: "./_docs/"
-          retention-days: 1
-
-      - name: Debug uploaded artifacts
-        run: |
-          echo "Uploaded artifact details:"
-          ls -lah _docs
 
   deploy:
     needs: build
@@ -72,16 +64,6 @@ jobs:
       id-token: write
     environment:
       name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
     steps:
-      - name: Download documentation artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: documentation
-          path: "./_docs/"
-
-      - name: Verify downloaded artifact
-        run: ls -lah _docs  # DEBUGGING
-
       - id: deployment
         uses: actions/deploy-pages@v2
