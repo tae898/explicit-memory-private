@@ -1,5 +1,9 @@
+# This workflow generates documentation for the project and deploys it to GitHub Pages.
+# For more information, see: https://help.github.com/actions/language-and-framework-guides/using-python-with-github-actions
+
 name: Documentation
 
+# Security: restrict permissions for CI jobs.
 permissions:
   contents: read
 
@@ -7,21 +11,25 @@ on:
   push:
     branches:
       - "main"
+
+  # Allows you to run this workflow manually from the Actions tab.
   workflow_dispatch:
 
+# Allow one concurrent deployment.
 concurrency:
   group: "pages"
   cancel-in-progress: true
 
 jobs:
+  # Build the documentation and upload the static HTML files as an artifact.
   build:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository without submodules
-        uses: actions/checkout@v4
-        with:
-          submodules: false
-          fetch-depth: 1
+        run: |
+          git clone --depth 1 https://github.com/humemai/humemai.git humemai
+          cd humemai
+          git checkout main
 
       - name: Setup Pages
         uses: actions/configure-pages@v3
@@ -37,6 +45,7 @@ jobs:
 
       - name: Install humemai package
         run: |
+          cd humemai
           python -m pip install .
 
       - name: Create output directory
@@ -46,17 +55,16 @@ jobs:
 
       - name: Build documentation
         run: |
-          python -m pdoc -d google -o _docs humemai
+          cd humemai
+          python -m pdoc -d google -o ../_docs humemai
 
-      - name: Verify built documentation
-        run: ls -lah _docs  # Debug step: lists contents of _docs
-
-      - name: Upload documentation artifact
-        uses: actions/upload-artifact@v4
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v2
         with:
-          name: documentation
           path: "./_docs/"
 
+  # Deploy the artifact to GitHub Pages.
+  # This is a separate job so that only actions/deploy-pages has the necessary permissions.
   deploy:
     needs: build
     runs-on: ubuntu-latest
